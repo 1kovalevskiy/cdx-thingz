@@ -229,6 +229,7 @@ Run tests: `python3 plugins/planning/hooks/plan-annotate.py --test`
 4. **External review** — auto-detects `codex` CLI or uses custom command, adversarial loop with severity-aware early exit (stops after the first iteration that finds no critical/major issues; minor findings are still fixed)
 5. **Critical-only review** — 2 agents (quality + implementation), critical/major issues only + fixer
 6. **Finalize** — rebase, squash, verify (optional)
+7. **Stats summary** — single agent reads the session log + git state and reports total tokens / wall-clock / per-phase breakdown / branch churn / fixer iterations
 
 Review agents are read-only reporters. The fixer agent evaluates each finding, fixes confirmed issues, rejects false positives, and reports back.
 
@@ -249,7 +250,7 @@ Or at the user level (applies to all projects). A `SessionStart` hook copies bun
 ```
 Same pattern works for any prompt or agent file — just mirror the path under the override directory.
 
-Bundled prompts: `task.md`, `fixer.md`, `review.md`, `codex-review.md`, `finalizer.md`, `progress-file.md`
+Bundled prompts: `task.md`, `fixer.md`, `review.md`, `codex-review.md`, `finalizer.md`, `stats.md`, `progress-file.md`
 Bundled agents: `quality.txt`, `implementation.txt`, `testing.txt`, `simplification.txt`, `documentation.txt`, `smells.txt`
 
 **Customization patterns** — two common shapes:

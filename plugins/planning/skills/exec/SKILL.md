@@ -77,6 +77,7 @@ Then add review tasks:
 - `TaskCreate(subject="Review phase 3: codex external", description="adversarial codex/claude review loop", activeForm="Running codex review...")`
 - `TaskCreate(subject="Review phase 4: critical only", description="2 review agents + fixer", activeForm="Running review phase 4...")`
 - `TaskCreate(subject="Finalize", description="rebase, clean up commits, verify", activeForm="Finalizing...")`
+- `TaskCreate(subject="Stats summary", description="aggregate token/duration/git stats from session log", activeForm="Summarizing stats...")`
 
 Update tasks as you go: `TaskUpdate(taskId, status="in_progress")` when starting, `TaskUpdate(taskId, status="completed")` when done.
 
@@ -224,11 +225,21 @@ Spawn one Agent tool call with `mode: "bypassPermissions"`, `subagent_type: "gen
 
 This is best-effort — if rebase fails, report the issue but don't block completion.
 
-### Step 12. Completion
+### Step 12. Stats summary
 
-When finalize is done (or skipped on failure):
+After finalize (or after step 11 was skipped on hg/disabled), spawn one Agent tool call with `mode: "bypassPermissions"`, `subagent_type: "general-purpose"`, and the prompt from `prompts/stats.md`. Replace `DEFAULT_BRANCH` and `PROGRESS_FILE_PATH` in the resolved content.
+
+The stats agent reads this session's main log + subagent logs from `~/.claude/projects/<cwd-encoded>/`, aggregates per-phase token/duration/tool-use counts, runs `git diff --shortstat DEFAULT_BRANCH...HEAD` for branch churn, and returns a compact markdown report.
+
+Show the stats agent's full markdown output to the user verbatim. Do NOT summarize it further — the agent already produces a tight summary.
+
+This step is best-effort — if the stats agent fails or the session log path can't be resolved, report the failure but do not block completion.
+
+### Step 13. Completion
+
+When stats summary is done (or skipped on failure):
 - Log completion to progress file: `bash ${CLAUDE_PLUGIN_ROOT}/skills/exec/scripts/append-progress.sh <progress-file> "completed"`
-- Report summary: "All N tasks completed, reviews passed, branch finalized"
+- Report final line: "All N tasks completed, reviews passed, branch finalized"
 - Do NOT move the plan file or push — just report completion
 
 ## Key rules

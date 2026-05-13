@@ -42,6 +42,7 @@ The planning plugin has three components: make (plan creation), exec (autonomous
 4. Executes tasks sequentially — one subagent per task, commits after each
 5. Runs multi-phase review: comprehensive (iteration 1) then critical re-check loop → code smells → external (codex) → critical-only
 6. Optional finalize: rebase and squash commits
+7. Stats summary: aggregate per-phase tokens/duration + git diff stats and report
 
 ### Configuration
 Set via `userConfig` in plugin.json (prompted at install):
