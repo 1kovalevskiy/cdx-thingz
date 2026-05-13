@@ -47,12 +47,17 @@ Tag every finding with severity (CRITICAL/MAJOR/MINOR) and format each on its ow
 
 In your next assistant response, emit 5 Agent tool_use blocks together. Each with `mode: "bypassPermissions"`, `subagent_type: "general-purpose"`, and the assembled prompt for one of the 5 specialists (quality, implementation, testing, simplification, documentation).
 
-After ALL 5 agents return:
-- Collect and deduplicate findings from all agents
-- Same file:line + same issue — merge
-- Report ALL findings — do NOT verify, fix, or dismiss any
-- ONLY include agents that reported actual issues — omit agents that found nothing
-- List each finding as: `agent-name: SEVERITY: file:line — description`
+After ALL 5 agents return, produce a STRICT bullet-list report — no prose summary, no narrative, no "agents converge on" sentences. Format requirements:
+
+- Group findings by severity in this order: CRITICAL, MAJOR, MINOR. Use a heading per severity (`### CRITICAL`, `### MAJOR`, `### MINOR`). Skip a severity heading if it has zero findings.
+- Under each heading, one bullet per finding using EXACTLY this shape: `- <agent-name>: <file:line> — <description>`
+- Preserve the original agent attribution (e.g. `quality`, `implementation`, `testing`, `simplification`, `documentation` — whichever agent files were resolved). Do NOT rewrite as "agents" or "multiple agents".
+- If two agents reported the same file:line + same issue, merge into one bullet and prefix both agent names separated by `+` (e.g. `- quality+implementation: main.go:12 — ...`).
+- Do NOT verify, fix, or dismiss findings here — the fixer agent does that. Just emit the report verbatim from agent outputs.
+- Omit agents that found nothing entirely (no need to mention them).
+- After the bullet list, on its own line, emit one summary line: `Total: <N> findings (<C> critical, <M> major, <m> minor)`.
+
+Do NOT add explanatory prose, recommendations, or commentary. The list goes straight to the fixer.
 
 ## Critical-only mode (2 agents)
 
@@ -64,7 +69,7 @@ Resolve only `quality.txt` and `implementation.txt` using the resolve script. Re
 
 In your next assistant response, emit 2 Agent tool_use blocks together. Same `mode` and `subagent_type` as comprehensive mode.
 
-After BOTH agents return:
-- Same collection/deduplication as comprehensive mode
-- Only keep critical/major severity findings (drop any MINOR if returned)
-- List each finding as: `agent-name: SEVERITY: file:line — description`
+After BOTH agents return, produce the same STRICT bullet-list report as comprehensive mode (groupings by severity, exact bullet shape, agent attribution preserved, no prose summary). Additional rule for this mode:
+
+- Drop any MINOR findings if agents returned them anyway. Only CRITICAL and MAJOR headings appear here.
+- If neither agent reported CRITICAL or MAJOR findings, emit exactly: `Critical re-check: clean — no critical/major findings.` and stop.
