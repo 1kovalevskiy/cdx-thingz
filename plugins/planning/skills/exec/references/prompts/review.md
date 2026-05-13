@@ -4,11 +4,27 @@ This file is a playbook for the main orchestrator session — NOT a prompt to sp
 
 Resolve placeholders (`DEFAULT_BRANCH`, `PLAN_FILE_PATH`, `PROGRESS_FILE_PATH`, `REVIEW_PHASE`, `RESOLVE_SCRIPT`, `PLUGIN_DATA_DIR`), then follow the instructions below from the main session: launch the specified parallel Agent calls, collect findings from all returned agents, and pass them to the fixer subagent. The orchestrator does NOT fix issues itself — the fixer is a separate subagent that handles fixes.
 
+## How to fan out (READ THIS CAREFULLY)
+
+In your NEXT assistant response, emit N Agent tool_use blocks TOGETHER — all N must appear in the same response, no text between them, no pausing to read results. Multiple tool_use blocks in one response run in PARALLEL; tool_use blocks spread across separate responses run SEQUENTIALLY (Nx runtime). The agents are fully independent — no shared state, no ordering. Do NOT use run_in_background. After emitting all N tool calls, stop generating — the orchestrator response ends there, agents run in parallel, and your next response begins after all N return.
+
+Each agent prompt MUST include: "CRITICAL: You are a READ-ONLY reviewer. Do NOT run git stash, git checkout, git reset, or any command that modifies the working tree. Other agents run in parallel. Only use git diff, git log, git show, and read files."
+
+Each agent prompt MUST require severity tagging on every finding. Tag categories:
+- CRITICAL: bugs causing crashes, data loss, security holes, race conditions
+- MAJOR: real correctness issues — incorrect behavior, missing error handling, broken contracts
+- MINOR: style, doc drift, doc/code inconsistencies, nits, optional improvements
+
+Agents must format each finding on its own line as: `SEVERITY: file:line — description`. Findings without an explicit severity prefix are treated as MINOR.
+
+Do NOT embed diffs in agent prompts — tell each agent to run git commands itself. Embedding large diffs slows parallel launch and inflates context.
+
 ## Comprehensive mode (5 agents)
 
 Used when `REVIEW_PHASE` is `comprehensive`.
 
-For each agent, resolve its prompt file using the resolve script:
+Resolve each agent's prompt file using the resolve script (these are bash invocations, not parallel work — run them first, then assemble the agent prompts):
+
 ```
 bash RESOLVE_SCRIPT agents/quality.txt PLUGIN_DATA_DIR
 bash RESOLVE_SCRIPT agents/implementation.txt PLUGIN_DATA_DIR
@@ -17,7 +33,7 @@ bash RESOLVE_SCRIPT agents/simplification.txt PLUGIN_DATA_DIR
 bash RESOLVE_SCRIPT agents/documentation.txt PLUGIN_DATA_DIR
 ```
 
-Read the resolved content for each agent. Replace `DEFAULT_BRANCH` with the actual value in each prompt. Prepend each agent prompt with:
+For each resolved agent prompt, replace `DEFAULT_BRANCH` with the actual value, then prepend:
 
 "CRITICAL: You are a READ-ONLY reviewer. Do NOT run git stash, git checkout, git reset, or any command that modifies the working tree. Other agents run in parallel. Only use git diff, git log, git show, and read files.
 
@@ -25,25 +41,30 @@ Run `git diff DEFAULT_BRANCH...HEAD` to see all changes. Read the actual source 
 
 The plan file at PLAN_FILE_PATH describes the goal and requirements — use it to understand what the code is supposed to do.
 
-Read the progress file at PROGRESS_FILE_PATH for context on previous review iterations and fixes. Re-evaluate all findings independently — previous fixes may be incomplete or wrong, and previously dismissed issues may be real."
+Read the progress file at PROGRESS_FILE_PATH for context on previous review iterations and fixes. Re-evaluate all findings independently — previous fixes may be incomplete or wrong, and previously dismissed issues may be real.
 
-Launch all 5 in parallel — send ALL 5 Agent tool calls in a SINGLE message. Use `mode: "bypassPermissions"`, `subagent_type: "general-purpose"` for each.
+Tag every finding with severity (CRITICAL/MAJOR/MINOR) and format each on its own line as: `SEVERITY: file:line — description`."
+
+In your next assistant response, emit 5 Agent tool_use blocks together. Each with `mode: "bypassPermissions"`, `subagent_type: "general-purpose"`, and the assembled prompt for one of the 5 specialists (quality, implementation, testing, simplification, documentation).
 
 After ALL 5 agents return:
 - Collect and deduplicate findings from all agents
 - Same file:line + same issue — merge
 - Report ALL findings — do NOT verify, fix, or dismiss any
 - ONLY include agents that reported actual issues — omit agents that found nothing
-- List each finding as: agent-name: file:line — description
+- List each finding as: `agent-name: SEVERITY: file:line — description`
 
 ## Critical-only mode (2 agents)
 
 Used when `REVIEW_PHASE` is `critical`.
 
-Resolve only `quality.txt` and `implementation.txt` using the resolve script. Prepend each agent prompt with: "Report ONLY critical and major issues — bugs, security vulnerabilities, data loss risks, broken functionality, incorrect logic, missing critical error handling. Ignore style, minor improvements, suggestions."
+Resolve only `quality.txt` and `implementation.txt` using the resolve script. Replace `DEFAULT_BRANCH` in each, then prepend the same READ-ONLY preamble as comprehensive mode, plus:
 
-Launch both in parallel. Same format as comprehensive mode.
+"Report ONLY critical and major issues — bugs, security vulnerabilities, data loss risks, broken functionality, incorrect logic, missing critical error handling. Ignore style, minor improvements, suggestions. Tag every reported finding with severity (CRITICAL or MAJOR) and format each on its own line as: `SEVERITY: file:line — description`."
+
+In your next assistant response, emit 2 Agent tool_use blocks together. Same `mode` and `subagent_type` as comprehensive mode.
 
 After BOTH agents return:
 - Same collection/deduplication as comprehensive mode
-- Only keep critical/major severity findings
+- Only keep critical/major severity findings (drop any MINOR if returned)
+- List each finding as: `agent-name: SEVERITY: file:line — description`
