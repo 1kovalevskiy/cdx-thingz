@@ -4,6 +4,12 @@ This repo ships independent Claude Code plugins. Version headings use values fro
 
 Entries are sorted by plugin version date, newest first.
 
+## planning v3.7.3 - 2026-06-01
+
+### Bug Fixes
+
+- exec: enforce one-task-at-a-time in the task loop. Step 6 described a sequential loop but never forbade batch-spawning, so an autonomous run could fan out all remaining tasks in parallel — corrupting the shared plan file and working tree. Added an explicit guard that the parallel-fanout instruction applies only to the review phases.
+
 ## planning v3.7.2 - 2026-05-30
 
 ### Bug Fixes
