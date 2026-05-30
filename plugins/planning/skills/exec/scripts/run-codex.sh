@@ -39,4 +39,8 @@ if [ "${CODEX_NO_OVERRIDES:-}" != 1 ]; then
     )
 fi
 
-codex "${args[@]}" "$prompt"
+# stdin redirected from /dev/null: codex exec reads stdin to append a
+# <stdin> block even when a prompt arg is given, so an inherited open pipe
+# (e.g. background launch) would block read_to_end forever. /dev/null gives
+# immediate EOF; empty stdin is ignored when a prompt arg is present.
+codex "${args[@]}" "$prompt" < /dev/null

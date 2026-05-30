@@ -4,6 +4,12 @@ This repo ships independent Claude Code plugins. Version headings use values fro
 
 Entries are sorted by plugin version date, newest first.
 
+## planning v3.7.2 - 2026-05-30
+
+### Bug Fixes
+
+- redirect codex stdin from `/dev/null` in `run-codex.sh` so the external review step does not hang when launched with an inherited open stdin (e.g. background tasks); `codex exec` reads stdin to append a `<stdin>` block even when a prompt arg is given
+
 ## thinking-tools v1.2.1 - 2026-05-18
 
 ### Improvements
