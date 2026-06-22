@@ -4,6 +4,24 @@ This repo ships independent Claude Code plugins. Version headings use values fro
 
 Entries are sorted by plugin version date, newest first.
 
+## thinking-tools v1.2.2 - 2026-06-22
+
+### Improvements
+
+- ask-codex: add a memory-load preamble so Codex reads Claude's memory files (`CLAUDE.md`, `CLAUDE.local.md`, `.claude/rules/`, `~/.claude/CLAUDE.md`); Codex only auto-loads `AGENTS.md` #30 @alexkart
+- ask-codex: raise default `model_reasoning_effort` to `xhigh` and align the intro wording with `gpt-5.5` #30 @alexkart
+
+### Bug Fixes
+
+- ask-codex: drop the dead `-c project_doc=...` overrides. `project_doc` is not a valid Codex config key, so they loaded nothing #30 @alexkart
+- ask-codex: redirect stdin from `/dev/null` so `codex exec` no longer hangs on "Reading additional input from stdin…" on fresh installs (#26) #30 @alexkart
+
+## planning v3.7.7 - 2026-06-22
+
+### Bug Fixes
+
+- exec: drop the dead `-c project_doc=...` overrides from `run-codex.sh`. `project_doc` is not a valid Codex config key, so the codex review pass loaded nothing #30 @alexkart
+
 ## planning v3.7.6 - 2026-06-09
 
 ### Bug Fixes
