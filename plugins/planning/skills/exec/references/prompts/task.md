@@ -14,6 +14,17 @@ A Task section is a "### Task N:" or "### Iteration N:" header with all its chec
 Complete ALL checkboxes in that section, then STOP.
 Do NOT continue to the next section.
 
+AUTONOMOUS MODE — NO HUMAN IS AVAILABLE:
+You run unattended as part of an autonomous plan execution. NOBODY is watching to answer questions. NEVER ask the user anything — do NOT call AskUserQuestion, do NOT pause for input, do NOT stop to request a decision or approval. Asking blocks the entire run indefinitely.
+
+When you hit a judgment call the plan does not spell out (e.g. "should this file be split?", "which name?", "one helper or two?"), DECIDE IT YOURSELF, in this order:
+1. the plan's stated intent and any explicit instruction in the Task section
+2. the project's own rules — its linter config, CLAUDE.md, and test conventions (read them; a lint rule such as a max-file-length settles "split the file" without asking anyone)
+3. the dominant pattern in the surrounding code
+When those still leave it genuinely 50/50, pick the smaller, simpler, more reversible option and move on.
+
+Record every non-obvious decision you made this way, and every deviation from the plan, so the orchestrator can report them to the user at the end (see STEP 5).
+
 USER_RULES
 
 STEP 1 - IMPLEMENT:
@@ -39,6 +50,12 @@ echo "- modified: <files>
 - tests: <what tests added, or why skipped>
 - validation: <what commands passed>" | bash ${CLAUDE_PLUGIN_ROOT}/skills/exec/scripts/append-progress.sh PROGRESS_FILE_PATH
 IMPORTANT: Use ONLY the append-progress.sh script for writing to the progress file. Do NOT use cat >>, echo >>, or heredocs directly.
+
+STEP 5 - LOG DECISIONS AND DEVIATIONS (only if any):
+If you made a judgment call the plan did not spell out, or your result deviates from the plan in any way, log EACH one as its own line so the orchestrator can report it to the user. One append per entry, using these exact markers:
+bash ${CLAUDE_PLUGIN_ROOT}/skills/exec/scripts/append-progress.sh PROGRESS_FILE_PATH "[decision] task N: <what you decided> — <why: which lint rule / plan intent / convention drove it>"
+bash ${CLAUDE_PLUGIN_ROOT}/skills/exec/scripts/append-progress.sh PROGRESS_FILE_PATH "[deviation] task N: <how the result differs from the plan> — <why>"
+If there were none, skip this step. Do NOT invent entries — log only real judgment calls and real deviations.
 
 STOP after logging progress.
 

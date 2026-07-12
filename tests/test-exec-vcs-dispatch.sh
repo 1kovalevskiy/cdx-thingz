@@ -257,6 +257,32 @@ assert_output "git/existing-feature: outputs current branch" "existing-feature" 
 current="$(git -C "$GIT_CB_FEAT" branch --show-current)"
 assert_output "git/existing-feature: still on existing-feature" "existing-feature" "$current"
 
+# test 5b: --print-name derives the branch name with NO git side effects.
+# the exec SKILL uses this in worktree mode so the main tree is never touched.
+echo ""
+echo "test 5b: --print-name outputs derived name and does NOT create/switch a branch"
+GIT_PN="$(mk_tmp)"
+make_git_repo "$GIT_PN" main
+output="$(cd "$GIT_PN" && bash "$CREATE_BRANCH" --print-name "$PLAN_FILE_DATED")"
+assert_output "print-name: outputs derived branch name" "$EXPECTED_DERIVED_BRANCH" "$output"
+current="$(git -C "$GIT_PN" branch --show-current)"
+assert_output "print-name: main tree still on default branch (no checkout)" "main" "$current"
+branches="$(git -C "$GIT_PN" branch --format='%(refname:short)' | tr '\n' ' ')"
+assert_not_contains "print-name: derived branch was not created" "$branches" "$EXPECTED_DERIVED_BRANCH"
+
+# test 5c: --print-name strips the date prefix; a non-dated plan returns its stem unchanged
+echo ""
+echo "test 5c: --print-name on a non-dated plan returns the stem"
+output="$(cd "$GIT_PN" && bash "$CREATE_BRANCH" --print-name "docs/plans/no-date-name.md")"
+assert_output "print-name: non-dated plan returns stem" "no-date-name" "$output"
+
+# test 5d: --print-name with no plan path -> non-zero exit
+echo ""
+echo "test 5d: --print-name with missing plan path exits non-zero"
+rc=0
+(bash "$CREATE_BRANCH" --print-name >/dev/null 2>&1) || rc=$?
+assert_exit_nonzero "print-name: missing path exits non-zero" "$rc"
+
 if [ "$HG_AVAILABLE" -eq 1 ]; then
     # test 6: hg repo with no active bookmark -> creates bookmark, outputs derived name
     echo ""

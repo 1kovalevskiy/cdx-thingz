@@ -4,6 +4,13 @@ This repo ships independent Claude Code plugins. Version headings use values fro
 
 Entries are sorted by plugin version date, newest first.
 
+## planning v3.8.4 - 2026-07-12
+
+### Bug Fixes
+
+- exec: autonomous execution no longer stops to ask the user questions mid-run. Task and fixer subagents are told no human is available, so they decide judgment calls themselves (from the plan's intent, the project's lint rules and CLAUDE.md, and the surrounding code) instead of pausing. Each non-obvious decision and plan deviation is logged, and the orchestrator reports them all at completion under "Decisions made autonomously / Deviations from the plan"
+- exec: worktree isolation no longer touches the main working directory. In worktree mode the feature branch is created only inside the `EnterWorktree` worktree (renamed to drop the `worktree-` prefix), and Step 4's create-branch.sh is skipped, so the main tree is never checked out to the feature branch. Added an isolation guard that verifies the main tree's branch is unchanged, plus a `--print-name` mode to create-branch.sh that derives the branch name with no git side effects
+
 ## planning v3.8.3 - 2026-07-12
 
 ### Bug Fixes

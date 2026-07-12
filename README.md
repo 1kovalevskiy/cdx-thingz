@@ -239,9 +239,11 @@ Run tests: `python3 plugins/planning/scripts/plan-annotate.py --test`
 5. **Critical-only review** — 2 agents (quality + implementation), critical/major issues only + fixer
 6. **Finalize** — rebase, squash, verify (optional)
 7. **Stats summary** — single agent reads the session log + git state and reports total tokens / wall-clock / per-phase breakdown / branch churn / fixer iterations
-8. **Completion** — moves the finished plan into a `completed/` subdirectory of its plans directory and commits the move (VCS-aware via `move-plan.sh`, no push), so completed plans leave the active plans directory and stop showing up as candidates on the next run
+8. **Completion** — moves the finished plan into a `completed/` subdirectory of its plans directory and commits the move (VCS-aware via `move-plan.sh`, no push), so completed plans leave the active plans directory and stop showing up as candidates on the next run; also reports every judgment call the run made on its own and any deviations from the plan
 
 Review agents are read-only reporters. The fixer agent evaluates each finding, fixes confirmed issues, rejects false positives, and reports back.
+
+**Autonomous by design** — the run assumes no human is available, so subagents never stop to ask questions. They resolve judgment calls the plan does not settle from the project's lint rules, CLAUDE.md, and surrounding code, log each decision and any plan deviation, and the orchestrator reports them all to you at completion. When the worktree option is chosen the entire run is isolated in a git worktree; the main working directory is never checked out to the feature branch or otherwise touched.
 
 **VCS support** — the exec helper scripts are VCS-aware and work in both git and Mercurial (hg) repositories. The finalize and external-review phases remain git-only, but their behaviour can be customised for hg via `.claude/exec-plan/prompts/finalizer.md` and `.claude/exec-plan/prompts/codex-review.md` overrides.
 

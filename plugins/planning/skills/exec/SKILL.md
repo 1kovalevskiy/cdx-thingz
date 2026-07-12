@@ -89,9 +89,17 @@ First detect current branch state — run `git branch --show-current` and compar
 
 In BOTH cases: invoke the AskUserQuestion tool **now**, do not generate text first, do not skip, do not assume. Auto mode does NOT exempt this question — the choice affects the user's working directory and the orchestrator cannot decide on their behalf.
 
-If user picks "Worktree (isolated)" or "Move to worktree", use the `EnterWorktree` tool to create an isolated worktree before proceeding. All subsequent steps (branch creation, task execution, reviews, finalize, stats) happen inside the worktree. At completion, report the worktree path and branch so the user can review and merge.
+**If the user picks "Worktree (isolated)" or "Move to worktree"** — the main working directory MUST NOT be touched at all: no branch is created or checked out there, and no file changes land there. That isolation is the entire point of this mode. Set `worktree_mode = true` and do this:
 
-If user picks "In-place" or "Stay here", proceed normally without worktree.
+1. Record the main tree's path and current branch so you can verify it stayed untouched: `main_tree=$(git rev-parse --show-toplevel)` and `main_branch=$(git branch --show-current)`.
+2. Derive the feature branch name with NO git side effects: `name=$(bash ${CLAUDE_PLUGIN_ROOT}/skills/exec/scripts/create-branch.sh --print-name <plan-file-path>)`.
+3. Create the isolated worktree with the `EnterWorktree` tool, passing `<name>` as the worktree name. It creates `.claude/worktrees/<name>/` on a new branch `worktree-<name>` forked from the current HEAD and switches the session into it. Capture the worktree's absolute path as `worktree_path`.
+4. Drop the `worktree-` prefix so the branch is just `<name>`, operating on the worktree only: `git -C <worktree_path> branch -m <name>`.
+5. **This means Step 4 (create-branch.sh) is SKIPPED** — the branch already exists inside the worktree. Running create-branch.sh here would `git checkout -b` in the main tree and break isolation.
+6. **Isolation guard**: verify the main tree is untouched — `git -C "$main_tree" branch --show-current` MUST still equal `main_branch`. If it changed, STOP and report the isolation breach instead of continuing.
+7. Every later step (task execution, reviews, finalize, stats, the plan move) runs inside the worktree; use `<name>` wherever a branch name is needed. At completion, report `worktree_path` and `<name>` so the user can review and merge.
+
+**If the user picks "In-place" or "Stay here"** — set `worktree_mode = false` and proceed normally; Step 4 creates the branch in this working directory.
 
 ### Step 3. Create task list
 
@@ -112,7 +120,9 @@ Update tasks as you go: `TaskUpdate(taskId, status="in_progress")` when starting
 
 ### Step 4. Create branch
 
-**MANDATORY**: Run the script below. Do NOT create the branch manually — the script strips the date prefix from the plan filename (e.g., `20260329-feature-name.md` → branch `feature-name`).
+**Skip this step entirely when `worktree_mode` is true** — Step 2 already created the branch (`<name>`) inside the isolated worktree, and running this here would `git checkout -b` in the main working tree and break isolation. Carry `<name>` forward as the branch name and go to Step 5.
+
+Otherwise (in-place mode), **MANDATORY**: run the script below. Do NOT create the branch manually — the script strips the date prefix from the plan filename (e.g., `20260329-feature-name.md` → branch `feature-name`).
 
 ```
 bash ${CLAUDE_PLUGIN_ROOT}/skills/exec/scripts/create-branch.sh <plan-file-path>
@@ -269,6 +279,7 @@ This step is best-effort — if the stats agent fails or the session log path ca
 ### Step 13. Completion
 
 When stats summary is done (or skipped on failure):
+- **Report autonomous decisions and deviations to the user.** The run had no human to answer questions, so subagents decided judgment calls themselves and logged them. Collect every such entry from the progress file — `grep -E '^\[(decision|deviation)\]' <progress-file>` — and present them in a dedicated section titled **"Decisions made autonomously / Deviations from the plan"**, one bullet per entry with its stated reason, so the user learns every question the run answered on its own and why. If there are none, state "no autonomous decisions or deviations were logged." Do this regardless of whether finalize ran — finalize is skipped on hg or when disabled, so this is the guaranteed place the user always gets the report.
 - Log completion to progress file: `bash ${CLAUDE_PLUGIN_ROOT}/skills/exec/scripts/append-progress.sh <progress-file> "completed"`
 - Move the finished plan into its `completed/` subdirectory and commit it (best-effort): `bash ${CLAUDE_PLUGIN_ROOT}/skills/exec/scripts/move-plan.sh <plan-file-path>`. The script is a no-op when the plan is already under `completed/` or missing, derives the target as a `completed/` sibling of the plan's directory (so it respects a custom `plans_dir` and worktrees), and commits the move VCS-aware (git/hg). Do NOT push. If the script exits non-zero, report the failure but do not block completion.
 - Report the final line "All N tasks completed, reviews passed, branch finalized". Append ", plan moved to completed/" ONLY when move-plan.sh actually moved the file (it printed `moved plan to ...`); omit the suffix when the move was a no-op (already under `completed/` or missing) or exited non-zero
@@ -288,3 +299,5 @@ When stats summary is done (or skipped on failure):
 - All prompt and agent files MUST be resolved through the three-layer override chain before use
 - All `subagent_type` values must be `general-purpose` — agent files provide the specialized prompt
 - After reading a prompt file, substitute all placeholders before passing to subagent (see Placeholder Substitution)
+- Subagents run with NO human available — they must NEVER ask the user a question (no AskUserQuestion, no pausing for input). They decide judgment calls the plan does not settle from the project's lint rules, CLAUDE.md, and code conventions, and log each as a `[decision]`/`[deviation]` line for the completion report
+- In worktree mode (`worktree_mode = true`) the main working directory is never touched — no branch is created or checked out there and no changes land there; all git operations run inside the worktree, and Step 4's create-branch.sh is skipped

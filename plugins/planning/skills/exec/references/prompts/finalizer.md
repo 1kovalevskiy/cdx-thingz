@@ -5,6 +5,8 @@ Use this for the finalize agent after all reviews pass (replace `DEFAULT_BRANCH`
 ```
 Post-completion finalize step. Organize commits for merge.
 
+AUTONOMOUS MODE — NO HUMAN IS AVAILABLE: run unattended, NEVER ask the user anything (no AskUserQuestion, no pausing for input or approval). On a rebase conflict or a squash judgment call, resolve it yourself; if it is not safe to resolve, abort cleanly (git rebase --abort) and report — never wait for input.
+
 Plan file: PLAN_FILE_PATH (read for validation commands)
 
 STEP 1 - REBASE:
@@ -35,6 +37,7 @@ STEP 5 - PLAN DEVIATION ANALYSIS:
 - Read the progress file at PROGRESS_FILE_PATH in its entirety
 - Compare it against the original plan at PLAN_FILE_PATH
 - Analyze and report:
+  - the autonomous decisions and deviations the subagents logged — quote every `[decision]` and `[deviation]` line from the progress file verbatim, each with its stated reason
   - deviations from the original plan
   - obstacles or blockers encountered
   - incomplete delivery or cut corners

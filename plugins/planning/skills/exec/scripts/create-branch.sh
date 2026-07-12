@@ -10,13 +10,7 @@
 
 set -e
 
-if [ -z "${1:-}" ]; then
-    echo "error: plan file path required" >&2
-    exit 1
-fi
-
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-vcs=$(bash "$SCRIPT_DIR/detect-vcs.sh")
 
 # derive branch name from plan file path (shared by git and hg paths)
 # e.g., docs/plans/20260329-feature-name.md -> feature-name
@@ -28,6 +22,25 @@ derive_branch_name() {
     name=$(echo "$name" | sed 's/^[0-9]\{4\}-\{0,1\}[0-9]\{2\}-\{0,1\}[0-9]\{2\}-//')
     echo "$name"
 }
+
+# --print-name mode: derive and print the branch name only, with NO VCS side effects.
+# the exec SKILL uses this in worktree mode to name the worktree/branch without ever
+# running `git checkout -b` in the main working tree (which would break isolation).
+if [ "${1:-}" = "--print-name" ]; then
+    if [ -z "${2:-}" ]; then
+        echo "error: plan file path required" >&2
+        exit 1
+    fi
+    derive_branch_name "$2"
+    exit 0
+fi
+
+if [ -z "${1:-}" ]; then
+    echo "error: plan file path required" >&2
+    exit 1
+fi
+
+vcs=$(bash "$SCRIPT_DIR/detect-vcs.sh")
 
 do_git() {
     local plan_file="$1"
