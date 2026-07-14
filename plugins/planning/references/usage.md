@@ -1,11 +1,11 @@
 # Planning Plugin Usage
 
-The planning plugin has three components: make (plan creation), exec (autonomous execution), and plan-review (quality review agent).
+The planning plugin has three components: make (plan creation), exec (autonomous execution), and plan-review (quality review prompt).
 
-## Make — `/planning:make`
+## Make — `$planning:make`
 
 ### Triggers
-- `/planning:make <description>` — create an implementation plan
+- `$planning:make <description>` — create an implementation plan
 - invoked automatically by brainstorm when user picks "Write plan"
 
 ### Workflow
@@ -17,10 +17,10 @@ The planning plugin has three components: make (plan creation), exec (autonomous
 
 ### Examples
 ```
-/planning:make add user authentication
-/planning:make fix the race condition in the connection pool
-/planning:make refactor the middleware stack
-/planning:make add my Go testing rules to user-level planning rules
+$planning:make add user authentication
+$planning:make fix the race condition in the connection pool
+$planning:make refactor the middleware stack
+$planning:make add my Go testing rules to user-level planning rules
 ```
 
 ### Plan File Structure
@@ -29,62 +29,61 @@ The planning plugin has three components: make (plan creation), exec (autonomous
 - Each task has `**Files:**` block and `[ ]` checkboxes
 - Progress tracking with `[x]`, `➕`, `⚠️` markers
 
-## Exec — `/planning:exec`
+## Exec — `$planning:exec`
 
 ### Triggers
-- `/planning:exec [plan-file]` — execute a plan autonomously
+- `$planning:exec [plan-file]` — execute a plan autonomously
 - "exec", "execute plan", "run plan"
 
 ### Workflow
 1. Resolves plan file (from argument or picks from `docs/plans/`)
-2. Asks about worktree isolation (worktree vs current directory)
-3. Creates a feature branch
+2. Uses the Codex Worktree already selected for the task; in Local mode, asks whether to continue in place or restart in Worktree mode
+3. On the local default branch, creates a `codex/<plan-name>` feature branch after confirmation
 4. Executes tasks sequentially — one subagent per task, commits after each
-5. Runs multi-phase review: comprehensive (iteration 1) then critical re-check loop → code smells → external (codex) → critical-only
+5. Runs multi-phase review: comprehensive (iteration 1) then critical re-check loop → code smells → critical-only
 6. Optional finalize: rebase and squash commits
-7. Stats summary: aggregate per-phase tokens/duration + git diff stats and report
+7. Stats summary: aggregate progress-file, elapsed-time, commit, and Git/Mercurial diff statistics
 
 ### Configuration
-Set via `userConfig` in plugin.json (prompted at install):
+Set with environment variables:
 
-| Key | Default | Description |
+| Variable | Default | Description |
 |-----|---------|-------------|
-| `external_review_cmd` | *(auto-detect codex)* | external review tool command |
-| `task_retries` | `1` | retries for failed tasks |
-| `review_iterations` | `5` | max fix-and-recheck cycles |
-| `external_review_iterations` | `10` | max external review iterations |
-| `finalize_enabled` | `true` | run rebase + squash phase |
-| `plans_dir` | `docs/plans` | directory for plan files |
+| `PLANNING_TASK_RETRIES` | `1` | retries for failed tasks |
+| `PLANNING_REVIEW_ITERATIONS` | `5` | max fix-and-recheck cycles |
+| `PLANNING_FINALIZE_ENABLED` | `1` | run attached-branch Git rebase + squash phase |
+| `PLANNING_PLANS_DIR` | `docs/plans` | directory for plan files |
+| `PLANNING_DISABLE_REVDIFF` | unset | skip local editor overlays and use chat review |
 
 ### Customization
 Prompts and agent definitions use a three-layer override chain:
-1. Project: `.claude/exec-plan/prompts/` and `.claude/exec-plan/agents/`
-2. User: `$CLAUDE_PLUGIN_DATA/prompts/` and `$CLAUDE_PLUGIN_DATA/agents/`
+1. Project: `.codex/exec-plan/prompts/` and `.codex/exec-plan/agents/`
+2. User: `${CODEX_HOME:-$HOME/.codex}/exec-plan/prompts/` and `${CODEX_HOME:-$HOME/.codex}/exec-plan/agents/`
 3. Bundled defaults
 
-A `SessionStart` hook copies bundled defaults to `$CLAUDE_PLUGIN_DATA` on first run — edit the copies to customize.
+Bundled defaults are used directly when no override exists. Create only the project or user override files you want to customize.
 
 ### Customization patterns
 
 - *Route review fanout to named specialists.* Override `prompts/review.md` to launch named subagents (`qa-expert`, `code-quality`, `go-test-expert`, `implementation-reviewer`, `documentation`) instead of `general-purpose`.
-- *Delegate to an existing skill.* Override a prompt or agent file to read another skill's `SKILL.md` and follow it inline. Examples: `agents/smells.txt` → `/smells` skill; `prompts/finalizer.md` → `/rebase-commits` skill.
+- *Delegate to an existing bundled skill.* Override a prompt or agent file to read that skill's `SKILL.md` completely and follow it inline.
 
 ### Subagent constraint
 
-Subagents in current Claude Code do not have the Agent tool — they cannot spawn other subagents. `prompts/review.md` is therefore read by the main session orchestrator (as a playbook), not given to a subagent. The 5-specialist fanout runs directly from the main session. Leaf-work prompts (`task.md`, `fixer.md`, `finalizer.md`, `codex-review.md`, `agents/smells.txt`) can be subagent prompts because they don't need to spawn further. Any custom override needing parallel fanout must follow the same playbook pattern.
+Subagents do not spawn other subagents. `prompts/review.md` is therefore read by the main task orchestrator as a playbook, not given to a subagent. The 5-specialist fanout runs directly from the main task. Leaf-work prompts (`task.md`, `fixer.md`, `finalizer.md`, `agents/smells.txt`) can be subagent prompts because they do not need further fanout. Any custom override needing parallel fanout must follow the same playbook pattern.
 
-## Plan-Review — agent
+## Plan-Review — prompt
 
 ### Triggers
 - launched by make's "Auto review" option
-- usable as `subagent_type: "plan-review"` in Agent tool calls
+- read by make and passed to one Codex review subagent with the plan path and resolved bundled paths
 
 ### What It Checks
 - problem definition and solution correctness
 - scope creep and over-engineering
 - testing requirements and coverage
 - task granularity and ordering
-- convention adherence (via CLAUDE.md and custom rules)
+- convention adherence (via AGENTS.md and custom rules)
 
 ### Output
 Structured report with severity-rated findings:
@@ -100,3 +99,5 @@ After creating a plan, make offers interactive review via:
 - **plan-annotate.py** (fallback) — opens plan in `$EDITOR` via terminal overlay
 
 Both loop until the user quits without annotations.
+
+In Codex app, cloud, or IDE contexts without a visible terminal overlay, make shows the plan file and collects the same review feedback in chat.

@@ -1,10 +1,11 @@
 ---
 name: git-review
 description: Interactive git diff annotation review. Generates a cleaned-up diff, opens in editor for user annotations, and addresses feedback in a loop. Activates on "git review", "review changes", "review my changes", "annotate changes", "interactive review".
-allowed-tools: Bash, Read, Edit, Write, Grep, Glob
 ---
 
 # Git Review
+
+The bundled [git-review.py](scripts/git-review.py) link is relative to this `SKILL.md`. Resolve it to an absolute path before invoking it, while keeping the repository as the command working directory.
 
 Interactive annotation-based code review using editor overlays.
 
@@ -20,7 +21,7 @@ Interactive annotation-based code review using editor overlays.
 2. Opens in `$EDITOR` via agterm overlay, tmux popup, kitty overlay, or wezterm split-pane
 3. User adds annotations (comments, change requests) directly in the file
 4. Script returns user's annotations as a git diff
-5. Claude reads annotations, fixes code in the real repo
+5. Codex reads annotations, fixes code in the real repo
 6. Script regenerates fresh diff (reflecting fixes), opens again
 7. Loop until user closes editor without changes
 
@@ -28,9 +29,7 @@ Interactive annotation-based code review using editor overlays.
 
 ### Step 1: Run the script
 
-```bash
-${CLAUDE_PLUGIN_ROOT}/skills/git-review/scripts/git-review.py [base_ref]
-```
+Run [git-review.py](scripts/git-review.py) with Python. Pass no arguments for automatic detection, or pass the selected base ref as the only argument.
 
 - No arguments: auto-detects uncommitted changes or branch vs default branch
 - With argument: diffs against the specified ref (branch, tag, commit, `HEAD~3`)
@@ -50,7 +49,7 @@ show which file and code area the annotation refers to.
 
 ### Step 3: Plan changes
 
-Enter plan mode (EnterPlanMode) to analyze annotations and design the fix approach:
+Present a fix plan in chat to analyze annotations and design the fix approach:
 - list each annotation and which file/code area it refers to
 - describe the planned changes for each annotation
 - get user approval before modifying any code
@@ -89,9 +88,9 @@ User: "review my changes"
 → user adds "this should validate input" next to a handler
 → user closes editor
 → stdout shows the annotation
-→ enter plan mode: "annotation requests input validation in handler.go, plan: add validate() call"
+→ present fix plan: "annotation requests input validation in handler.go, plan: add validate() call"
 → user approves plan
-→ Claude adds input validation to the handler
+→ Codex adds input validation to the handler
 → run: git-review.py (again)
 → editor opens with updated diff (validation now visible)
 → user closes without changes

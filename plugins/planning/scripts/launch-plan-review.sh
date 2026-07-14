@@ -11,9 +11,8 @@ if [ $# -lt 1 ]; then
     exit 1
 fi
 
-# skip review entirely when disabled (e.g. claude /remote-control, where this overlay
-# would open on the host terminal the remote client can't see and block the session).
-# empty stdout signals "no annotations", so the hook and /planning:make loop proceed.
+# Explicitly disable local terminal overlays when the current Codex surface
+# cannot display them. Empty stdout means "no annotations" to the caller.
 if [ -n "${PLANNING_DISABLE_REVDIFF:-}" ]; then
     exit 0
 fi

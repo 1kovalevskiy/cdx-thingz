@@ -1,0 +1,8 @@
+{
+  "name": "thinking-tools", "version": "2.0.0",
+  "description": "Dialectic analysis and systematic root-cause investigation.",
+  "author": { "name": "1kovalevskiy", "url": "https://github.com/1kovalevskiy" },
+  "homepage": "https://github.com/1kovalevskiy/cdx-thingz", "repository": "https://github.com/1kovalevskiy/cdx-thingz", "license": "MIT",
+  "keywords": ["analysis", "debugging", "root-cause"], "skills": "./skills/",
+  "interface": { "displayName": "Thinking Tools", "shortDescription": "Evidence-driven analysis", "longDescription": "Stress-test claims from opposing viewpoints and investigate failures through structured root-cause analysis.", "developerName": "1kovalevskiy", "category": "Developer Tools", "capabilities": ["Interactive", "Read"], "defaultPrompt": ["Stress-test this technical claim.", "Find the root cause of this failure."] }
+}

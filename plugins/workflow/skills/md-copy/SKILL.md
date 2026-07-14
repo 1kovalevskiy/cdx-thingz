@@ -1,7 +1,6 @@
 ---
 name: md-copy
 description: Format final answer as markdown and copy to clipboard. Use when user says "copy as markdown", "md copy", "copy formatted", "clipboard", or wants the session's final answer formatted and copied.
-allowed-tools: Bash
 ---
 
 # Markdown Copy
@@ -24,7 +23,7 @@ Extract the final answer from this session, convert it to proper markdown format
 2. Format it according to the rules above
 3. Write formatted text to a timestamped temp file:
 ```bash
-tmpfile="/tmp/claude-md-copy-$(date +%s).txt"
+tmpfile="/tmp/codex-md-copy-$(date +%s).txt"
 cat > "$tmpfile" << 'EOF'
 <formatted content>
 EOF

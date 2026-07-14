@@ -1,10 +1,11 @@
 ---
 name: new
 description: Use when user asks to create a release, cut a release, or publish a version. Auto-detects GitHub vs GitLab vs Gitea, calculates semantic version, generates release notes from PRs/MRs or commits, shows preview for confirmation before publishing.
-allowed-tools: Bash, AskUserQuestion
 ---
 
 # Release Workflow
+
+Bundled script links in this file are relative to this `SKILL.md`. Resolve each linked target to an absolute path before invoking it, while keeping the repository as the command working directory.
 
 Creates GitHub, GitLab, or Gitea releases with auto-versioning and release notes generation.
 
@@ -16,16 +17,16 @@ Creates GitHub, GitLab, or Gitea releases with auto-versioning and release notes
 
 ## Scripts
 
-Helper scripts in skill's `scripts/` directory (use `${CLAUDE_PLUGIN_ROOT}` for path resolution):
-- `detect-platform.sh` - outputs `github`, `gitlab`, or `gitea`
-- `calc-version.sh <type>` - outputs new version (e.g., `v1.2.3`)
-- `get-notes.sh <platform>` - outputs release notes (PRs/MRs or commits)
+Helper scripts in the skill's `scripts/` directory:
+- [detect-platform.sh](scripts/detect-platform.sh) - outputs `github`, `gitlab`, or `gitea`
+- [calc-version.sh](scripts/calc-version.sh) `<type>` - outputs new version (e.g., `v1.2.3`)
+- [get-notes.sh](scripts/get-notes.sh) `<platform>` - outputs release notes (PRs/MRs or commits)
 
 ## Workflow
 
 ### Step 1: Ask Release Type
 
-Use AskUserQuestion tool to get release type:
+Use Codex interactive input when available to get the release type. If it is unavailable, present the same options as a concise question in chat and wait for the user's answer:
 
 ```json
 {
@@ -44,9 +45,7 @@ Use AskUserQuestion tool to get release type:
 
 ### Step 2: Detect Platform
 
-```bash
-platform=$(sh ${CLAUDE_PLUGIN_ROOT}/skills/release/scripts/detect-platform.sh)
-```
+Run [detect-platform.sh](scripts/detect-platform.sh) with `sh` and capture its stdout as `platform`.
 
 ### Step 3: Validate Prerequisites
 
@@ -68,9 +67,7 @@ last_tag=$(git describe --tags --abbrev=0 --match "v*" 2>/dev/null || echo "none
 
 ### Step 5: Calculate New Version
 
-```bash
-new_version=$(sh ${CLAUDE_PLUGIN_ROOT}/skills/release/scripts/calc-version.sh <release_type>)
-```
+Run [calc-version.sh](scripts/calc-version.sh) with `sh`, passing the selected release type as its only argument, and capture stdout as `new_version`.
 
 Verify tag doesn't already exist:
 ```bash
@@ -81,9 +78,7 @@ fi
 
 ### Step 6: Generate Release Notes
 
-```bash
-notes=$(sh ${CLAUDE_PLUGIN_ROOT}/skills/release/scripts/get-notes.sh "$platform")
-```
+Run [get-notes.sh](scripts/get-notes.sh) with `sh`, passing `platform` as its only argument, and capture stdout as `notes`.
 
 Script logic:
 1. Collects PRs/MRs merged after last tag (with author)
@@ -92,7 +87,7 @@ Script logic:
 4. Groups into: New Features, Improvements, Bug Fixes, Other
 5. Strips prefix from description for cleaner output
 
-**Post-processing (Claude must do this before presenting):**
+**Post-processing (Codex must do this before presenting):**
 - Deduplicate entries with same description (PRs and their commits often duplicate)
 - Prefer PR entries over commit entries when duplicated (PR has #number and @author)
 - Compare descriptions after stripping conventional prefix
@@ -112,7 +107,7 @@ Output format:
 - handle nil pointer def5678
 ```
 
-### Step 7: Check and Update CHANGELOG
+### Step 7: Check and Prepare CHANGELOG
 
 ```bash
 # detect actual changelog filename (case-sensitive filesystem!)
@@ -125,10 +120,10 @@ done
 If changelog exists:
 1. **CRITICAL**: Use the exact detected filename (`$changelog`) for all operations - do not hardcode "CHANGELOG.md"
 2. Read the file to understand its format (Keep a Changelog, simple list, etc.)
-3. Add new version section at the top (after any header/intro)
+3. Prepare a new version section for the top (after any header/intro), but do not write or commit it yet
 4. Use the generated release notes
 5. Match the existing format and style
-6. Commit the changelog update using the detected filename:
+6. Include the exact proposed changelog update in the preview. Do not run the following commit commands until Step 8 is confirmed:
 ```bash
 git add "$changelog"
 git commit -m "docs: update changelog for $new_version"
@@ -164,7 +159,7 @@ Release Notes:
 --------------
 ```
 
-Use AskUserQuestion tool to confirm:
+Use Codex interactive input when available to confirm. If it is unavailable, present the same options as a concise question in chat and wait for the user's answer:
 
 ```json
 {
@@ -180,11 +175,14 @@ Use AskUserQuestion tool to confirm:
 }
 ```
 
-**Wait for user confirmation before creating release.**
+**Wait for user confirmation before writing or committing the changelog, creating a tag, or publishing the release.**
 
 ### Step 9: Create Release
 
 Only after user confirms:
+
+1. Apply the exact changelog update shown in the preview and commit it with the commands from Step 7, if a changelog exists.
+2. Create the release using the matching platform command below.
 
 **GitHub:**
 ```bash

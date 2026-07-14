@@ -6,24 +6,24 @@ Custom rules let you inject project-specific or personal conventions into the pl
 
 Two levels, checked in order (first-found-wins, never merged):
 
-1. **Project-level**: `.claude/planning-rules.md` in the current working directory
-2. **User-level**: `$CLAUDE_PLUGIN_DATA/planning-rules.md` (per-plugin persistent storage)
+1. **Project-level**: `.codex/planning-rules.md` in the current working directory
+2. **User-level**: `${CODEX_HOME:-$HOME/.codex}/planning-rules.md` (per-plugin persistent storage)
 
 When both non-empty files exist, only the project-level file is used. Empty files are treated as absent and fall through to the next level.
 
 ## Resolution
 
-Each skill runs `resolve-rules.sh planning-rules.md <data-dir>` via Bash at startup, where `<data-dir>` is the plugin data directory path passed from the skill content (text-substituted from `${CLAUDE_PLUGIN_DATA}`). The script falls back to the `$CLAUDE_PLUGIN_DATA` env var if no argument is provided. Outputs the first file found (project, then user) or empty output if neither exists.
+Each planning skill runs `resolve-rules.sh planning-rules.md` via Bash at startup. The script checks the project file and then `${CODEX_HOME:-$HOME/.codex}/planning-rules.md`, outputting the first non-empty file or empty output if neither exists.
 
 ## Managing Rules
 
-Ask the make command to manage rules:
+Ask the make skill to manage rules:
 
 - **show rules** — displays current rules and which level they came from
-- **add/update project rules** — writes to `.claude/planning-rules.md`
-- **add/update user rules** — writes to `$CLAUDE_PLUGIN_DATA/planning-rules.md`
-- **clear project rules** — deletes `.claude/planning-rules.md`
-- **clear user rules** — deletes `$CLAUDE_PLUGIN_DATA/planning-rules.md`
+- **add/update project rules** — writes to `.codex/planning-rules.md`
+- **add/update user rules** — writes to `${CODEX_HOME:-$HOME/.codex}/planning-rules.md`
+- **clear project rules** — deletes `.codex/planning-rules.md`
+- **clear user rules** — deletes `${CODEX_HOME:-$HOME/.codex}/planning-rules.md`
 
 ## Example Content
 

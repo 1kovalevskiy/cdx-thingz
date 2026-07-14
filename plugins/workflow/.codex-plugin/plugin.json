@@ -1,0 +1,8 @@
+{
+  "name": "workflow", "version": "2.0.0",
+  "description": "Session helpers for knowledge capture, clarification, course correction, and clipboard output.",
+  "author": { "name": "1kovalevskiy", "url": "https://github.com/1kovalevskiy" },
+  "homepage": "https://github.com/1kovalevskiy/cdx-thingz", "repository": "https://github.com/1kovalevskiy/cdx-thingz", "license": "MIT",
+  "keywords": ["workflow", "knowledge", "clipboard"], "skills": "./skills/",
+  "interface": { "displayName": "Workflow", "shortDescription": "Everyday session helpers", "longDescription": "Capture durable repository knowledge, clarify mismatched expectations, reset failed approaches, and copy generated text.", "developerName": "1kovalevskiy", "category": "Developer Tools", "capabilities": ["Interactive", "Read", "Write"], "defaultPrompt": ["Capture what we learned in AGENTS.md.", "Re-evaluate this approach from scratch."] }
+}

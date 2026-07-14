@@ -19,9 +19,9 @@ Skip:
 - Test additions
 - Code style changes
 
-## CLAUDE.md (AI Knowledge Base)
+## AGENTS.md (AI Knowledge Base)
 
-Check if changes require CLAUDE.md updates:
+Check if changes require AGENTS.md updates:
 
 Must document:
 - New architectural patterns discovered/established

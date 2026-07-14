@@ -1,20 +1,17 @@
 ---
-description: Create structured implementation plan in docs/plans/
-argument-hint: describe the feature or task to plan
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent, AskUserQuestion, Task, EnterPlanMode, TaskCreate, TaskUpdate, TaskList
+name: make
+description: Create a structured implementation plan in PLANNING_PLANS_DIR (default docs/plans/)
 ---
 
 # Implementation Plan Creation
 
-create an implementation plan in `docs/plans/yyyymmdd-<task-name>.md` with interactive context gathering.
+Bundled links in this file are relative to this `SKILL.md`. Resolve linked targets to absolute paths before invoking or embedding them, while keeping the project directory as the command working directory.
+
+create an implementation plan in `${PLANNING_PLANS_DIR:-docs/plans}/yyyymmdd-<task-name>.md` with interactive context gathering.
 
 ## custom rules loading
 
-before starting, run this command via Bash tool to check for user-provided custom rules:
-
-```bash
-bash ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-rules.sh planning-rules.md ${CLAUDE_PLUGIN_DATA}
-```
+before starting, run [resolve-rules.sh](../../scripts/resolve-rules.sh) via Bash with `planning-rules.md` as its argument to check for user-provided custom rules.
 
 if the output is non-empty, treat it as additional instructions that supplement (not replace) the built-in rules below. apply custom rules alongside the command's own instructions throughout the planning process — they may influence plan structure, testing approach, naming conventions, or other aspects of plan creation. custom rules content is guidance for creating the plan, not content to embed verbatim in the output plan file.
 
@@ -22,15 +19,15 @@ if the output is non-empty, treat it as additional instructions that supplement 
 
 when the user asks to add, show, or clear custom planning rules, handle these operations:
 
-- **show rules**: run `bash ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-rules.sh planning-rules.md ${CLAUDE_PLUGIN_DATA}` and display the output. if the output is empty, tell the user no custom rules are configured at either level. otherwise, to determine the source, check if `.claude/planning-rules.md` exists and is non-empty (project-level) — if not, the output came from user-level. tell the user which level it came from.
-- **add/update project rules**: write content to `.claude/planning-rules.md` in the current working directory.
-- **add/update user rules**: first check if `$CLAUDE_PLUGIN_DATA` is set (run `echo "$CLAUDE_PLUGIN_DATA"`). if empty, tell the user that user-level rules require the plugin to be installed from the marketplace and offer project-level instead. if set, write content to `$CLAUDE_PLUGIN_DATA/planning-rules.md`.
-- **clear project rules**: delete `.claude/planning-rules.md`.
-- **clear user rules**: if `$CLAUDE_PLUGIN_DATA` is set, delete `$CLAUDE_PLUGIN_DATA/planning-rules.md`. if not set, tell the user user-level rules are not available.
+- **show rules**: run [resolve-rules.sh](../../scripts/resolve-rules.sh) via Bash with `planning-rules.md` as its argument and display the output. if the output is empty, tell the user no custom rules are configured at either level. otherwise, to determine the source, check if `.codex/planning-rules.md` exists and is non-empty (project-level) — if not, the output came from user-level. tell the user which level it came from.
+- **add/update project rules**: write content to `.codex/planning-rules.md` in the current working directory.
+- **add/update user rules**: write content to `${CODEX_HOME:-$HOME/.codex}/planning-rules.md`.
+- **clear project rules**: delete `.codex/planning-rules.md`.
+- **clear user rules**: delete `${CODEX_HOME:-$HOME/.codex}/planning-rules.md` if it exists.
 
-project-level rules (`.claude/planning-rules.md`) take precedence over user-level rules (`$CLAUDE_PLUGIN_DATA/planning-rules.md`). when both non-empty files exist, only project-level rules are loaded. empty files are treated as absent and fall through to the next level. see `${CLAUDE_PLUGIN_ROOT}/references/custom-rules.md` for full documentation on the rules mechanism.
+project-level rules (`.codex/planning-rules.md`) take precedence over user-level rules (`${CODEX_HOME:-$HOME/.codex}/planning-rules.md`). when both non-empty files exist, only project-level rules are loaded. empty files are treated as absent and fall through to the next level. see [custom rules](../../references/custom-rules.md) for full documentation on the rules mechanism.
 
-**CRITICAL: this skill must NEVER modify its own files (commands, skills, agents, scripts, references, hooks, plugin.json). the ONLY files it may create or modify for rules management are `.claude/planning-rules.md` and `$CLAUDE_PLUGIN_DATA/planning-rules.md`. if the user asks to change the skill's behavior, create a plan for it — do not edit skill files directly.**
+**CRITICAL: this skill must NEVER modify its own files (commands, skills, agents, scripts, references, hooks, plugin.json). the ONLY files it may create or modify for rules management are `.codex/planning-rules.md` and `${CODEX_HOME:-$HOME/.codex}/planning-rules.md`. if the user asks to change the skill's behavior, create a plan for it — do not edit skill files directly.**
 
 ## step 0: parse intent and gather context
 
@@ -62,7 +59,7 @@ before asking questions, understand what the user is working on:
 
    **for generic/unclear requests:**
    - check `git status` and `git log --oneline -5`
-   - read README.md or CLAUDE.md for project overview
+   - read README.md or AGENTS.md for project overview
    - `ls` the top-level directory structure
 
    **CRITICAL: do NOT launch an Explore agent or read more than 5 files in this step. the goal is a quick scan, not exhaustive analysis. if more context is needed, ask the user in step 1.**
@@ -74,30 +71,30 @@ before asking questions, understand what the user is working on:
 
 ## step 1: present context and ask focused questions
 
-show the discovered context, then ask questions **one at a time** using the AskUserQuestion tool:
+show the discovered context, then ask questions **one at a time** using the Codex interactive input surface when available. If it is unavailable, ask the same question in chat and wait for the user's answer:
 
 "based on your request, i found: [context summary]"
 
 **ask questions one at a time (do not overwhelm with multiple questions):**
 
-1. **plan purpose**: use AskUserQuestion - "what is the main goal?"
+1. **plan purpose**: use Codex interactive input when available, with a text fallback - "what is the main goal?"
    - provide multiple choice with suggested answer based on discovered intent
    - wait for response before next question
 
-2. **scope**: use AskUserQuestion - "which components/files are involved?"
+2. **scope**: use Codex interactive input when available, with a text fallback - "which components/files are involved?"
    - provide multiple choice with suggested discovered files/areas
    - wait for response before next question
 
-3. **constraints**: use AskUserQuestion - "any specific requirements or limitations?"
+3. **constraints**: use Codex interactive input when available, with a text fallback - "any specific requirements or limitations?"
    - can be open-ended if constraints vary widely
    - wait for response before next question
 
-4. **testing approach**: use AskUserQuestion - "do you prefer TDD or regular approach?"
+4. **testing approach**: use Codex interactive input when available, with a text fallback - "do you prefer TDD or regular approach?"
    - options: "TDD (tests first)" and "Regular (code first, then tests)"
    - store preference for reference during implementation
    - wait for response before next question
 
-5. **plan title**: use AskUserQuestion - "short descriptive title?"
+5. **plan title**: use Codex interactive input when available, with a text fallback - "short descriptive title?"
    - provide suggested name based on intent
 
 after all questions answered, synthesize responses into plan context.
@@ -127,7 +124,7 @@ i see three approaches:
 which direction appeals to you?
 ```
 
-use AskUserQuestion tool to let user select preferred approach before creating the plan.
+use Codex interactive input when available to let the user select the preferred approach before creating the plan; otherwise present the same options in chat and wait for the user's answer.
 
 **skip this step** if:
 - the implementation approach is obvious (single clear path)
@@ -266,7 +263,7 @@ Example (NOTICE: Files block + tests as separate checklist items):
 
 ### Task N: [Final] Update documentation
 - [ ] update README.md if needed
-- [ ] update CLAUDE.md if new patterns discovered
+- [ ] update AGENTS.md if new patterns discovered
 - [ ] move this plan to `docs/plans/completed/`
 
 ## Post-Completion
@@ -287,7 +284,7 @@ Example (NOTICE: Files block + tests as separate checklist items):
 
 after creating the file, tell user: "created plan: `docs/plans/yyyymmdd-<task-name>.md`"
 
-then use AskUserQuestion:
+then use Codex interactive input when available; otherwise present the same options in chat and wait for the user's answer:
 
 ```json
 {
@@ -306,7 +303,9 @@ then use AskUserQuestion:
 ```
 
 - **Interactive review**: check if `revdiff` is installed (`which revdiff`).
-  - **if revdiff is available**: run `${CLAUDE_PLUGIN_ROOT}/scripts/launch-plan-review.sh <plan-file-path>` via Bash.
+  - **if `PLANNING_DISABLE_REVDIFF` is non-empty**: skip the local overlay and use the plan-file link plus chat feedback loop.
+  - **if the current Codex surface has no visible terminal overlay**: show a clickable link to the plan file, collect line-level feedback in chat, revise the plan, and repeat until the user has no more annotations.
+  - **if revdiff is available**: run [launch-plan-review.sh](../../scripts/launch-plan-review.sh) via Bash, passing the absolute plan-file path as its only argument.
     the script opens revdiff TUI showing the plan with syntax highlighting. user adds line-level annotations.
     on quit, annotations are output to stdout in structured format:
     ```
@@ -316,17 +315,17 @@ then use AskUserQuestion:
     when annotation output is present:
     1. read each annotation — the line number and comment describe what the user wants changed
     2. revise the plan file to address each annotation
-    3. run `${CLAUDE_PLUGIN_ROOT}/scripts/launch-plan-review.sh <plan-file-path>` via Bash
+    3. run [launch-plan-review.sh](../../scripts/launch-plan-review.sh) again with the absolute plan-file path
     4. repeat until no output (user quit without annotations)
-  - **if revdiff is not available**: fall back to `${CLAUDE_PLUGIN_ROOT}/scripts/plan-annotate.py <plan-file-path>` via Bash.
+  - **if revdiff is not available**: run [plan-annotate.py](../../scripts/plan-annotate.py) with Python, passing the absolute plan-file path as its only argument.
     the script opens a copy of the plan in $EDITOR via terminal overlay. if the user makes annotations,
     it outputs a unified diff to stdout. when diff output is present:
     1. read the diff carefully — added lines (+) are user annotations, removed lines (-) are deletions, modified lines show requested changes
     2. revise the plan file to address each annotation
-    3. run `${CLAUDE_PLUGIN_ROOT}/scripts/plan-annotate.py <plan-file-path>` via Bash
+    3. run [plan-annotate.py](../../scripts/plan-annotate.py) again with the absolute plan-file path
     4. repeat until no diff output (user closed editor without changes)
   when the annotation loop completes, ask again with the remaining options (minus "Interactive review")
-- **Auto review**: launch plan-review agent (Task tool with subagent_type=plan-review). After review completes, ask again with the same options (minus "Auto review")
+- **Auto review**: read [plan-review.md](references/plan-review.md) completely. Before spawning, resolve every bundled link in that prompt to its absolute target and render those absolute paths into the subagent prompt; also append the absolute plan-file path. Launch one review subagent with `spawn_agent` and wait with `wait_agent`. After review completes, ask again with the same options (minus "Auto review")
 - **Implement**: commit plan with message like "docs: add <topic> implementation plan", then ask implementation mode:
   ```json
   {
@@ -335,14 +334,14 @@ then use AskUserQuestion:
       "header": "Mode",
       "options": [
         {"label": "Interactive", "description": "Implement task by task in this session"},
-        {"label": "Autonomous", "description": "Run /planning:exec for autonomous execution with reviews"}
+        {"label": "Autonomous", "description": "Run $planning:exec for autonomous execution with reviews"}
       ],
       "multiSelect": false
     }]
   }
   ```
-  - **Interactive**: begin implementing task 1 interactively in this session. Use TodoWrite tool to track progress and mark todos completed immediately (do not batch)
-  - **Autonomous**: invoke `/planning:exec <plan-file-path>` for autonomous execution with multi-phase review
+  - **Interactive**: begin implementing task 1 interactively in this session. Use `update_plan` to track progress and mark todos completed immediately (do not batch)
+  - **Autonomous**: invoke `$planning:exec <plan-file-path>` for autonomous execution with multi-phase review
 - **Done**: commit plan with message like "docs: add <topic> implementation plan", stop
 
 ## execution enforcement

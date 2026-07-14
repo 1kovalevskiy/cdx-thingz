@@ -31,7 +31,7 @@ if [ "${1:-}" = "--print-name" ]; then
         echo "error: plan file path required" >&2
         exit 1
     fi
-    derive_branch_name "$2"
+    echo "codex/$(derive_branch_name "$2")"
     exit 0
 fi
 
@@ -76,7 +76,7 @@ do_git() {
     fi
 
     local branch_name
-    branch_name=$(derive_branch_name "$plan_file")
+    branch_name="codex/$(derive_branch_name "$plan_file")"
 
     # check if branch already exists
     if git show-ref --verify --quiet "refs/heads/$branch_name" 2>/dev/null; then

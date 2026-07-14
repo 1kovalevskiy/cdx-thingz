@@ -1,0 +1,8 @@
+{
+  "name": "planning", "version": "4.0.0",
+  "description": "Implementation planning, interactive plan review, and autonomous plan execution.",
+  "author": { "name": "1kovalevskiy", "url": "https://github.com/1kovalevskiy" },
+  "homepage": "https://github.com/1kovalevskiy/cdx-thingz", "repository": "https://github.com/1kovalevskiy/cdx-thingz", "license": "MIT",
+  "keywords": ["planning", "execution", "subagents"], "skills": "./skills/",
+  "interface": { "displayName": "Planning", "shortDescription": "Plan and execute code changes", "longDescription": "Create implementation plans, review them interactively, and execute tasks sequentially with focused subagents and review passes.", "developerName": "1kovalevskiy", "category": "Developer Tools", "capabilities": ["Interactive", "Read", "Write"], "defaultPrompt": ["Create an implementation plan for this change.", "Execute the current implementation plan."] }
+}

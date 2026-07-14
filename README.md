@@ -1,398 +1,99 @@
-# cc-thingz
+# cdx-thingz
 
-Things to make [Claude Code](https://claude.ai/code) even better — hooks, skills, and commands, organized as a marketplace of independent plugins.
-
-This is an unapologetically opinionated set. Every skill here is something I actually use — some multiple times a day (brainstorm, plan, review), others less often but worth having in the toolbox. There are plenty of plugin collections out there, from random grab-bags to well-organized catalogs. This one is mine, and it reflects how I work. Even if you don't need my particular toolbox, it might give you ideas for building your own and making Claude Code do what you want it to do.
+Opinionated plugins and skills for OpenAI Codex, packaged as a repository marketplace. This is the Codex port of [umputun/cc-thingz](https://github.com/umputun/cc-thingz); original authorship remains credited to Umputun and the project remains MIT-licensed.
 
 ## Install
 
-Add the marketplace, then install the plugins you want:
+Add the marketplace:
 
-    /plugin marketplace add umputun/cc-thingz
-
-    /plugin install brainstorm@umputun-cc-thingz
-    /plugin install review@umputun-cc-thingz
-    /plugin install planning@umputun-cc-thingz
-    /plugin install release-tools@umputun-cc-thingz
-    /plugin install thinking-tools@umputun-cc-thingz
-    /plugin install skill-eval@umputun-cc-thingz
-    /plugin install workflow@umputun-cc-thingz
-
-Test a plugin locally:
-
-    claude --plugin-dir plugins/brainstorm
-
-<details>
-<summary>Manual install (alternative)</summary>
-
-Copy the files you want to your Claude Code config directory manually.
-
-**brainstorm** — skill:
 ```bash
-cp -r plugins/brainstorm/skills/brainstorm ~/.claude/skills/
-cp -r plugins/brainstorm/scripts/ ~/.claude/skills/brainstorm/scripts
-cp -r plugins/brainstorm/references/ ~/.claude/skills/brainstorm/references
+codex plugin marketplace add 1kovalevskiy/cdx-thingz
 ```
 
-Note: when installed manually, update `${CLAUDE_PLUGIN_ROOT}` references inside `brainstorm/SKILL.md` to use `~/.claude/skills/brainstorm` instead.
+Install any plugin:
 
-**review** — skills (review-pr + git-review + writing-style):
 ```bash
-cp -r plugins/review/skills/pr ~/.claude/skills/
-cp -r plugins/review/skills/git-review ~/.claude/skills/
-cp -r plugins/review/skills/writing-style ~/.claude/skills/
-chmod +x ~/.claude/skills/git-review/scripts/git-review.py
+codex plugin add brainstorm@1kovalevskiy-cdx-thingz
+codex plugin add review@1kovalevskiy-cdx-thingz
+codex plugin add planning@1kovalevskiy-cdx-thingz
+codex plugin add release-tools@1kovalevskiy-cdx-thingz
+codex plugin add thinking-tools@1kovalevskiy-cdx-thingz
+codex plugin add skill-eval@1kovalevskiy-cdx-thingz
+codex plugin add workflow@1kovalevskiy-cdx-thingz
 ```
 
-Note: update the `/review:writing-style` reference inside `pr/SKILL.md` to `/writing-style` when installed manually.
-
-**planning** — command + exec skill + hook:
-```bash
-cp plugins/planning/commands/make.md ~/.claude/commands/
-cp -r plugins/planning/skills/exec ~/.claude/skills/
-cp -r plugins/planning/scripts/ ~/.claude/commands/scripts
-cp -r plugins/planning/references/ ~/.claude/commands/references
-cp plugins/planning/scripts/plan-annotate.py ~/.claude/scripts/
-chmod +x ~/.claude/scripts/plan-annotate.py
-chmod +x ~/.claude/skills/exec/scripts/*.sh
-```
-
-Note: when installed manually, update `${CLAUDE_PLUGIN_ROOT}` references inside `exec/SKILL.md`, `make.md`, and prompt files to use the appropriate local paths instead.
-
-Add the plan-annotate hook to `~/.claude/settings.json`:
-```json
-{
-  "hooks": {
-    "PreToolUse": [{
-      "matcher": "ExitPlanMode",
-      "hooks": [{
-        "type": "command",
-        "command": "~/.claude/scripts/plan-annotate.py",
-        "timeout": 345600
-      }]
-    }]
-  }
-}
-```
-
-**release-tools** — skills + scripts:
-```bash
-cp -r plugins/release-tools/skills/new ~/.claude/skills/
-cp -r plugins/release-tools/skills/last-tag ~/.claude/skills/
-chmod +x ~/.claude/skills/release/scripts/*.sh
-```
-
-**thinking-tools** — skills:
-```bash
-cp -r plugins/thinking-tools/skills/ask-codex ~/.claude/skills/
-cp -r plugins/thinking-tools/skills/dialectic ~/.claude/skills/
-cp -r plugins/thinking-tools/skills/root-cause-investigator ~/.claude/skills/
-```
-
-**skill-eval** — hook:
-```bash
-cp plugins/skill-eval/hooks/skill-forced-eval-hook.sh ~/.claude/scripts/
-chmod +x ~/.claude/scripts/skill-forced-eval-hook.sh
-```
-
-Add the skill-eval hook to `~/.claude/settings.json`:
-```json
-{
-  "hooks": {
-    "UserPromptSubmit": [{
-      "hooks": [{
-        "type": "command",
-        "command": "~/.claude/scripts/skill-forced-eval-hook.sh"
-      }]
-    }]
-  }
-}
-```
-
-**workflow** — skills:
-```bash
-cp -r plugins/workflow/skills/learn ~/.claude/skills/
-cp -r plugins/workflow/skills/clarify ~/.claude/skills/
-cp -r plugins/workflow/skills/wrong ~/.claude/skills/
-cp -r plugins/workflow/skills/md-copy ~/.claude/skills/
-cp -r plugins/workflow/skills/txt-copy ~/.claude/skills/
-```
-
-Restart Claude Code for changes to take effect.
-
-</details>
-
-## Updating plugins
-
-The `/plugin` menu has two update paths, and they behave differently:
-
-- `/plugin` → **Marketplaces** → **Update marketplace** — pulls the latest plugin catalog from the repo immediately. This is the reliable way to get updates.
-- `/plugin` → **Installed** → **Update now** — uses a local cache that can be stale for a long time and may not reflect recent changes. Use this as a fallback after updating the marketplace.
-
-To keep plugins current automatically, enable `/plugin` → **Marketplaces** → **Enable auto-update**. This updates the marketplace catalog on each session start.
+The `skill-eval` plugin contains a `UserPromptSubmit` hook. Codex asks you to trust plugin hooks separately after installation; review the hook before enabling it. Start a new task after installing or updating plugins.
 
 ## Plugins
 
-| Plugin | Description |
-|--------|-------------|
-| [brainstorm](#brainstorm) | Collaborative design dialogue — idea to approaches to design to plan |
-| [review](#review) | PR review + interactive git diff annotation review + writing style guide |
-| [planning](#planning) | Structured implementation planning, interactive annotation review, and autonomous plan execution |
-| [release-tools](#release-tools) | Release workflow — auto-versioning, release notes, changelog |
-| [thinking-tools](#thinking-tools) | Analytical thinking — dialectic analysis, root cause investigation, codex consultation |
-| [skill-eval](#skill-eval) | Forces skill evaluation before every response |
-| [workflow](#workflow) | Session helpers — knowledge capture, confusion handling, clipboard copy |
+| Plugin | Skills / behavior |
+|---|---|
+| `brainstorm` | `$brainstorm:brainstorm` — collaborative design and approach comparison |
+| `review` | `$review:pr`, `$review:git-review`, `$review:writing-style` |
+| `planning` | `$planning:make`, `$planning:exec` |
+| `release-tools` | `$release-tools:new`, `$release-tools:last-tag` |
+| `thinking-tools` | `$thinking-tools:dialectic`, `$thinking-tools:root-cause-investigator` |
+| `skill-eval` | reminds Codex to evaluate and fully read relevant skills |
+| `workflow` | `$workflow:learn`, `$workflow:clarify`, `$workflow:wrong`, `$workflow:md-copy`, `$workflow:txt-copy` |
 
-### brainstorm
+Natural-language activation also works. The explicit form is `$plugin:skill`.
 
-Collaborative design skill. Invoke with `/brainstorm:do` or trigger phrases like "brainstorm", "let's brainstorm", "help me design", "explore options for", etc.
+### Planning configuration
 
-| Component | Trigger | Description |
-|-----------|---------|-------------|
-| skill | `/brainstorm:do` | Collaborative design dialogue — idea → approaches → design → plan |
+| Variable | Default |
+|---|---:|
+| `PLANNING_PLANS_DIR` | `docs/plans` |
+| `PLANNING_TASK_RETRIES` | `1` |
+| `PLANNING_REVIEW_ITERATIONS` | `5` |
+| `PLANNING_FINALIZE_ENABLED` | `1` |
+| `PLANNING_DISABLE_REVDIFF` | unset; set to any non-empty value to skip local editor overlays |
 
-Guides a 4-phase dialogue to turn ideas into designs:
+Planning rules resolve from `.codex/planning-rules.md`, then `${CODEX_HOME:-$HOME/.codex}/planning-rules.md`. Brainstorm rules use the analogous `brainstorm-rules.md` paths. Exec prompt overrides resolve from `.codex/exec-plan/`, then `${CODEX_HOME:-$HOME/.codex}/exec-plan/`, then bundled defaults.
 
-1. **Understand** — gathers project context, asks questions one at a time (multiple choice preferred)
-2. **Explore Approaches** — proposes 2-3 options with trade-offs, leads with recommendation
-3. **Present Design** — breaks design into sections of 200-300 words, validates each incrementally
-4. **Next Steps** — offers to write a plan (`/planning:make`), enter plan mode, or start implementing
+`$planning:exec` runs one implementation agent at a time and uses parallelism only for independent read-only reviews. It uses the Worktree already selected for the Codex task and never creates a hidden nested worktree. Detached Codex worktrees skip rebase/squash and finish with a suggested branch/Create branch action. Mercurial execution is supported in place; Git-only finalization is skipped.
 
-### review
+### Knowledge capture
 
-PR review, interactive git diff annotation review, and writing style tools. Install together — review-pr uses writing-style for drafting comments.
+`$workflow:learn` sends team-wide repository guidance to the applicable project `AGENTS.md`. Personal preferences and machine-specific context go to Codex Local Memories through the native Codex memory surface. It never substitutes repository dotfiles for Local Memories and never saves secrets or transient debugging state.
 
-| Component | Trigger | Description |
-|-----------|---------|-------------|
-| skill | `/review:pr <number>` | PR review with architecture analysis, scope creep detection, and merge workflow |
-| skill | `/review:git-review [ref]` | Interactive git diff annotation review — editor overlay with feedback loop |
-| skill | `/review:writing-style` | Direct technical communication — anti-AI-speak, brevity, no filler |
+### Editor overlays
 
-**review-pr** — analyzes code quality, architecture, test coverage, and identifies scope creep:
-- **Phase 0** — detects PR vs issue (issues get a simpler comment-only flow)
-- **Phase 1** — fetches PR metadata, discussion history, merge status, and inline suggestions
-- **Phase 1.5** — asks review mode: Full (worktree + tests + linter + architecture) or Quick (diff-only)
-- **Phase 2** — sets up worktree and launches a subagent for deep analysis
-- **Phase 3-4** — presents findings, resolves open design questions
-- **Phase 5** — drafts review comment using `/review:writing-style`, posts as formal review
-- **Post-approve** — recommends merge strategy (rebase vs squash vs merge)
+Planning and local-diff review can use `revdiff`, agterm, tmux, zellij, kitty, wezterm-compatible terminals, and other backends supported by the bundled launchers. Overlays are available only in suitable local terminal environments. In Codex app, cloud, or IDE tasks without a visible overlay, the skills show the plan or diff and collect feedback in chat. No automatic plan-exit hook is installed.
 
-Uses `gh` CLI for all GitHub operations and git worktrees to avoid disrupting the current checkout.
+## Local development
 
-**git-review** — interactive annotation-based code review. Generates a cleaned-up diff, opens it in `$EDITOR` via agterm overlay, tmux popup, kitty overlay, or wezterm split-pane (agterm tried first). You annotate directly in the diff, and the script returns your changes as a git diff. Claude reads annotations, fixes code, regenerates the diff, and loops until you close the editor without changes. Supports auto-detection of uncommitted changes or branch diffs. **Agterm users**: needs `agtermctl` on PATH (bundled with agterm), no extra config.
+Validate the repository, then add this checkout as a marketplace:
 
-Run tests: `python3 plugins/review/skills/git-review/scripts/git-review.py --test`
-
-**writing-style** — enforces direct, brief writing for tickets, PRs, code reviews, and commit messages. Core principles: brevity, honest feedback, problem-solution structure, technical precision, anti-AI-speak. Does NOT apply to README.md, public docs, or blog posts.
-
-### planning
-
-Structured implementation planning with interactive annotation review and autonomous plan execution.
-
-| Component | Trigger | Description |
-|-----------|---------|-------------|
-| command | `/planning:make <desc>` | Structured implementation plan with interactive review loop |
-| skill | `/planning:exec [plan-file]` | Autonomous plan executor — task loop, multi-phase review, optional finalize |
-| hook | `PreToolUse` / CLI | Plan annotation in `$EDITOR` with diff-based feedback loop |
-| agent | `plan-review` | Automated plan quality review — completeness, over-engineering, testing |
-
-**plan command** — creates a plan file in `docs/plans/yyyymmdd-<task-name>.md` through interactive context gathering:
-- **Step 0** — parses intent and explores codebase for relevant context
-- **Step 1** — asks focused questions one at a time (goal, scope, constraints, testing approach, title)
-- **Step 1.5** — proposes 2-3 implementation approaches with trade-offs (skipped if obvious)
-- **Step 2** — creates the plan file with tasks, file lists, test requirements, and progress tracking
-- **Step 3** — offers interactive review (opens plan in `$EDITOR` via plan-annotate), auto review, start implementation, or done
-
-**plan-annotate.py** — interactive plan annotation tool. Opens plans in your `$EDITOR` via a terminal overlay (agterm overlay, tmux popup, kitty overlay, or wezterm split-pane), lets you annotate directly, and feeds a unified diff back to Claude so it revises the plan. Two modes:
-
-- *Hook mode* (default) — intercepts `ExitPlanMode`, opens plan in editor, denies tool call with diff if changes made, forcing revision loop
-- *File mode* (`plan-annotate.py <plan-file>`) — outputs unified diff to stdout for integration with custom workflows
-
-Requirements: agterm, tmux, kitty, or wezterm terminal (agterm tried first), `$EDITOR` (defaults to `vi`). **Agterm users**: needs `agtermctl` on PATH (bundled with agterm), no extra config. **Kitty users** must enable remote control in `kitty.conf`:
-
-```
-allow_remote_control yes
-listen_on unix:/tmp/kitty-$KITTY_PID
+```bash
+bash tests/run-all.sh
+codex plugin marketplace add "$(pwd)"
 ```
 
-*Note*: when `revdiff` is installed, the `ExitPlanMode` hook and `/planning:make` interactive review both route through `launch-plan-review.sh` instead, which supports a wider set of overlays: agterm, tmux, zellij, herdr, kitty, wezterm/kaku, cmux, ghostty, iTerm2, and emacs vterm. The 4-terminal list above applies only to the `$EDITOR` fallback when revdiff is not installed.
+After editing bundled plugin content, bump that plugin's version. Refresh a Git marketplace snapshot, then reinstall the changed plugin instead of editing cache directories:
 
-*Disabling review*: set `PLANNING_DISABLE_REVDIFF=1` to skip interactive plan review entirely on both routes (revdiff and the `$EDITOR` fallback). No overlay opens and the plan proceeds to the normal `ExitPlanMode` confirmation. This exists for remote clients (`claude /remote-control`): the overlay always opens on the host terminal, which a mobile or web client cannot see or interact with, so review would otherwise block the session. The variable is read when review fires, so export it in your shell before starting a session you may later drive remotely.
-
-The overlay popup size is configurable via env vars:
-
-| Env var | Description | Default |
-|---------|-------------|---------|
-| `REVDIFF_POPUP_WIDTH` | Tmux/Zellij popup width (e.g., `100%`, `80%`) | `90%` |
-| `REVDIFF_POPUP_HEIGHT` | Tmux/Zellij popup height / wezterm split percent | `90%` |
-
-Run tests: `python3 plugins/planning/scripts/plan-annotate.py --test`
-
-**plan-review agent** — automated plan quality reviewer. Analyzes plans for problem definition, solution correctness, scope creep, over-engineering, testing requirements, task granularity, and convention adherence. Used by the plan command's "Auto review" option. Outputs a structured report with severity-rated findings and an APPROVE/NEEDS REVISION verdict.
-
-**exec skill** — autonomous plan executor. Takes a plan file (from `/planning:make`) and executes it task-by-task using isolated subagents. Execution phases:
-
-1. **Task loop** — one subagent per task section, commits after each, retries on failure
-2. **Comprehensive review** — 5 parallel agents (quality, implementation, testing, simplification, documentation) + fixer
-3. **Code smells** — smells agent checks conventions, CLAUDE.md rules, code style + fixer
-4. **External review** — auto-detects `codex` CLI or uses custom command, adversarial loop with severity-aware early exit (stops after the first iteration that finds no critical/major issues; minor findings are still fixed)
-5. **Critical-only review** — 2 agents (quality + implementation), critical/major issues only + fixer
-6. **Finalize** — rebase, squash, verify (optional)
-7. **Stats summary** — single agent reads the session log + git state and reports total tokens / wall-clock / per-phase breakdown / branch churn / fixer iterations
-8. **Completion** — moves the finished plan into a `completed/` subdirectory of its plans directory and commits the move (VCS-aware via `move-plan.sh`, no push), so completed plans leave the active plans directory and stop showing up as candidates on the next run; also reports every judgment call the run made on its own and any deviations from the plan
-
-Review agents are read-only reporters. The fixer agent evaluates each finding, fixes confirmed issues, rejects false positives, and reports back.
-
-**Autonomous by design** — the run assumes no human is available, so subagents never stop to ask questions. They resolve judgment calls the plan does not settle from the project's lint rules, CLAUDE.md, and surrounding code, log each decision and any plan deviation, and the orchestrator reports them all to you at completion. When the worktree option is chosen the entire run is isolated in a git worktree; the main working directory is never checked out to the feature branch or otherwise touched.
-
-**VCS support** — the exec helper scripts are VCS-aware and work in both git and Mercurial (hg) repositories. The finalize and external-review phases remain git-only, but their behaviour can be customised for hg via `.claude/exec-plan/prompts/finalizer.md` and `.claude/exec-plan/prompts/codex-review.md` overrides.
-
-**Customization** — prompts and agent definitions use a three-layer override chain (checked in order, first match wins):
-1. Project: `.claude/exec-plan/prompts/` and `.claude/exec-plan/agents/`
-2. User: `${CLAUDE_PLUGIN_DATA}/prompts/` and `${CLAUDE_PLUGIN_DATA}/agents/`
-3. Bundled defaults (shipped with the plugin)
-
-To customize, place your modified version in the override path. For example, to customize `prompts/review.md` at the project level:
-```
-.claude/exec-plan/prompts/review.md
-```
-Or at the user level (applies to all projects). A `SessionStart` hook copies bundled defaults to `${CLAUDE_PLUGIN_DATA}` on first run — edit the copies there to customize. To find the directory, run `ls ~/.claude/plugins/data/` and look for the planning plugin entry:
-```
-~/.claude/plugins/data/<plugin-id>/prompts/review.md
-```
-Same pattern works for any prompt or agent file — just mirror the path under the override directory.
-
-Bundled prompts: `task.md`, `fixer.md`, `review.md`, `codex-review.md`, `finalizer.md`, `stats.md`, `progress-file.md`
-Bundled agents: `quality.txt`, `implementation.txt`, `testing.txt`, `simplification.txt`, `documentation.txt`, `smells.txt`
-
-**Customization patterns** — two common shapes:
-
-- *Route the review fanout to named specialists.* Override `prompts/review.md` to launch named Claude Code subagents (`qa-expert`, `code-quality`, `go-test-expert`, `implementation-reviewer`, `documentation`) instead of generic `general-purpose`. The override controls the `subagent_type` for each parallel specialist.
-- *Delegate to an existing skill.* Override a prompt or agent file to instruct the spawned subagent to read another skill's `SKILL.md` and follow its workflow. Examples: override `agents/smells.txt` to delegate to a `/smells` skill; override `prompts/finalizer.md` to delegate to a `/rebase-commits` skill. Useful when an installed skill captures the workflow better than the bundled default.
-
-**Constraint** — subagents in current Claude Code do not have the Agent tool, so they cannot spawn other subagents. `prompts/review.md` is therefore read by the main session orchestrator directly (used as a playbook), not given to a subagent — that is how the 5-specialist fanout actually runs in parallel. Single-agent leaf work (`task.md`, `fixer.md`, `finalizer.md`, `codex-review.md`, `agents/smells.txt`) runs as a spawned subagent because no further fan-out is needed. Any custom override that needs to fan out must follow the same playbook pattern.
-
-Configuration via `userConfig` (prompted at plugin install):
-
-| Key | Default | Description |
-|-----|---------|-------------|
-| `external_review_cmd` | *(empty — auto-detect codex)* | Command for external code review tool |
-| `task_retries` | `1` | Retries for failed tasks before stopping |
-| `review_iterations` | `5` | Max fix-and-recheck cycles during internal review |
-| `external_review_iterations` | `10` | Max iterations for external review adversarial loop |
-| `finalize_enabled` | `true` | Whether to run the finalize phase (rebase + squash) |
-| `plans_dir` | `docs/plans` | Directory where plan files are located |
-
-Environment variables read by `run-codex.sh`:
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `CODEX_MODEL` | `gpt-5.5` | Model name passed to `codex exec` via `-c model=...` |
-| `CODEX_NO_OVERRIDES` | *(unset)* | When set to the literal value `1`, suppresses all `-c` overrides (`model`, `model_reasoning_effort`, `stream_idle_timeout_ms`). Useful for codex proxies / wrappers that reject `-c model/provider` overrides. Any other value (including `0`, `false`, empty) leaves the overrides on. |
-
-### release-tools
-
-Release workflow tools for creating versioned releases with auto-generated notes.
-
-| Component | Trigger | Description |
-|-----------|---------|-------------|
-| skill | `/release-tools:new` | Create GitHub/GitLab/Gitea release with auto-versioning and release notes |
-| skill | `/release-tools:last-tag` | Show commits since the last tag in a formatted table |
-
-**release** — full release workflow: asks release type (hotfix/minor/major), auto-detects platform (GitHub/GitLab/Gitea), calculates semantic version, generates release notes grouped by type (features/improvements/fixes) from merged PRs and commits, updates CHANGELOG if present, shows preview for confirmation, then publishes. Includes helper scripts for platform detection, version calculation, and notes generation.
-
-**last-tag** — shows commits since the last tag in a formatted table with date, author, hash, and description. Detects single vs multiple authors and adjusts table layout. Offers interactive drill-down into individual commit details.
-
-### thinking-tools
-
-Analytical thinking tools for objective analysis.
-
-| Component | Trigger | Description |
-|-----------|---------|-------------|
-| skill | `/thinking-tools:ask-codex` | Consult OpenAI Codex (GPT-5.5) for investigation, debugging, or code review |
-| skill | `/thinking-tools:dialectic <statement>` | Prove and counter-prove a statement using parallel agents |
-| skill | `/thinking-tools:root-cause-investigator` | Systematic 5-Why root cause analysis for errors and bugs |
-
-**ask-codex** — consults OpenAI Codex (GPT-5.5) as a second opinion for debugging, investigation, or code review. Builds a focused prompt from conversation context, runs codex in read-only sandbox mode in the background, and presents findings with an independent assessment. Requires `codex` CLI to be installed and authenticated.
-
-**dialectic** — runs two agents in parallel with opposing goals (thesis vs antithesis) to eliminate confirmation bias. One agent finds all positive evidence, the other finds all negative evidence. After both complete, synthesizes findings into an objective conclusion and verifies cited evidence against actual code.
-
-Use cases: architecture decisions, bug analysis, performance claims, refactoring safety, code review.
-
-**root-cause-investigator** — applies 5-Why methodology to drill from symptoms to fundamental root causes. Structures investigation through progressive depth: surface cause → process issues → system problems → design issues → root cause. Includes reference materials for common patterns (race conditions, resource exhaustion, integration failures) and investigation techniques.
-
-### skill-eval
-
-Forces skill evaluation before every response.
-
-| Component | Trigger | Description |
-|-----------|---------|-------------|
-| hook | `UserPromptSubmit` | Forces skill evaluation before every response |
-
-By default, Claude Code often ignores available skills and jumps straight to generic responses. This hook injects a system reminder on every prompt that enforces an evaluate → activate → implement sequence. When installed, Claude will either list relevant skills and call `Skill()` for each before implementing, or proceed directly when no skills are relevant.
-
-### workflow
-
-Session workflow helpers for knowledge capture, confusion handling, course correction, and clipboard operations.
-
-| Component | Trigger | Description |
-|-----------|---------|-------------|
-| skill | `/workflow:learn` | Capture strategic project knowledge to project CLAUDE.md (routes per-developer / per-checkout discoveries to CLAUDE.local.md when that file is present) |
-| skill | `/workflow:clarify` | Investigate and explain user confusion, determine if real issue exists |
-| skill | `/workflow:wrong` | Reset and re-evaluate when current approach isn't working |
-| skill | `/workflow:md-copy` | Format final answer as markdown and copy to clipboard |
-| skill | `/workflow:txt-copy` | Copy generated text content to clipboard |
-
-**learn** — reviews conversation history, extracts strategic project knowledge (architecture patterns, conventions, operational insights), and saves selected items to the project CLAUDE.md. When `CLAUDE.local.md` is present, per-developer / per-checkout discoveries (machine-specific tooling, environment quirks) are routed there instead. Defers to any project-defined memory-placement guidance documented in `CLAUDE.md` or `.claude/rules/`. Uses granular selection via AskUserQuestion so the user picks exactly what to keep.
-
-**clarify** — activates on confusion signals ("I don't understand", "why is this happening", etc.). Investigates the actual codebase to determine whether the confusion stems from a misunderstanding or a real issue. If real, proceeds to plan mode for a fix.
-
-**wrong** — resets the current approach when it's not working. Re-analyzes the core problem, proposes 2-3 fresh alternatives with trade-offs, and recommends the best path forward.
-
-**md-copy** — formats the session's final answer as clean markdown (bold titles instead of headings, proper tables, code blocks) and copies to clipboard. Cross-platform clipboard detection (macOS pbcopy, Linux xclip/xsel).
-
-**txt-copy** — copies generated text (emails, messages, letters) to clipboard via a timestamped temp file. Cross-platform clipboard detection (macOS pbcopy, Linux xclip/xsel).
-
-## Custom Rules
-
-Both the **planning** and **brainstorm** plugins support custom rules injection — free-form markdown files loaded at skill invocation time and applied as additional instructions alongside built-in behavior.
-
-**Two levels**, checked in order (first-found-wins, never merged):
-
-1. **Project-level**: `.claude/<rules-file>.md` in the current working directory
-2. **User-level**: `$CLAUDE_PLUGIN_DATA/<rules-file>.md` (per-plugin persistent storage)
-
-When both non-empty files exist, only the project-level file is used. Empty files are treated as absent and fall through to the next level.
-
-| Plugin | Rules file | Affects |
-|--------|-----------|---------|
-| planning | `planning-rules.md` | make, exec, plan-review |
-| brainstorm | `brainstorm-rules.md` | brainstorm skill |
-
-**Example** — create `.claude/planning-rules.md` in your project:
-
-```markdown
-## testing conventions
-- use table-driven tests with testify
-- mock external dependencies with moq
-- aim for 80% coverage minimum
-
-## plan structure preferences
-- max 5 checkboxes per task
-- always include rollback steps for migrations
+```bash
+codex plugin marketplace upgrade 1kovalevskiy-cdx-thingz
+codex plugin remove planning@1kovalevskiy-cdx-thingz
+codex plugin add planning@1kovalevskiy-cdx-thingz
+codex plugin list
 ```
 
-**Managing rules** — ask the make command or brainstorm skill to add, show, or clear rules at either level (exec loads rules but management is done through make or brainstorm):
+For a local-path marketplace, skip the upgrade command but still remove and add the plugin so its versioned cache is rebuilt. Verify behavior in a new task.
 
-- "show my planning rules" — displays current rules and which level they came from
-- "add Go testing rules to project-level planning rules" — writes to `.claude/planning-rules.md`
-- "set up brainstorm rules from my-conventions.md" — reads file and writes to rules location
-- "clear user-level brainstorm rules" — deletes `$CLAUDE_PLUGIN_DATA/brainstorm-rules.md`
+## Manual fallback
 
-## Credits
+Without marketplace installation, copy individual skill directories into `~/.agents/skills/`. Keep each `SKILL.md` together with its `scripts/` and `references/` siblings so relative resolution continues to work.
 
-Some skills and scripts were influenced by or adapted from community ideas, blog posts, and open-source examples. Sources were not tracked accurately from the start. If you recognize your work and want proper attribution, please [open an issue](https://github.com/umputun/cc-thingz/issues) — I'll fix it.
+For `skill-eval`, copy the hook script to a stable location and merge its `UserPromptSubmit` entry from `plugins/skill-eval/hooks/hooks.json` into `~/.codex/hooks.json`, replacing `${PLUGIN_ROOT}` with that installed location. Review and trust the hook before enabling it.
+
+## Tests
+
+```bash
+bash tests/run-all.sh
+```
+
+The suite runs marketplace/plugin validation, forbidden compatibility scans, ShellCheck when available, YAML frontmatter checks, shell tests, and embedded Python tests.
 
 ## License
 
-MIT
+MIT. See [LICENSE](LICENSE).

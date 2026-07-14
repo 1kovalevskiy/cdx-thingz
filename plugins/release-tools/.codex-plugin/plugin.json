@@ -1,0 +1,8 @@
+{
+  "name": "release-tools", "version": "3.0.0",
+  "description": "Release creation, semantic versioning, and unreleased-change summaries.",
+  "author": { "name": "1kovalevskiy", "url": "https://github.com/1kovalevskiy" },
+  "homepage": "https://github.com/1kovalevskiy/cdx-thingz", "repository": "https://github.com/1kovalevskiy/cdx-thingz", "license": "MIT",
+  "keywords": ["release", "changelog", "versioning"], "skills": "./skills/",
+  "interface": { "displayName": "Release Tools", "shortDescription": "Prepare and publish releases", "longDescription": "Inspect unreleased changes, calculate semantic versions, prepare changelogs, and publish confirmed releases.", "developerName": "1kovalevskiy", "category": "Developer Tools", "capabilities": ["Interactive", "Read", "Write"], "defaultPrompt": ["Show changes since the last tag.", "Prepare a new release."] }
+}

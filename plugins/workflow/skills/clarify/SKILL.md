@@ -1,7 +1,6 @@
 ---
 name: clarify
 description: This skill should be used when user appears confused, frustrated, or shows misalignment between expectations and reality. Triggers on phrases like "I don't understand", "this doesn't make sense", "confused", "wait, shouldn't it...", "why is this happening", "I thought X did Y", contradictory statements, or frustration signals. Analyzes the confusion, explains the actual behavior, and determines if there's a real issue to address.
-allowed-tools: EnterPlanMode, AskUserQuestion
 ---
 
 # Clarify
@@ -112,7 +111,7 @@ Keep explanations:
 
 **D) Documentation issue**
 - System works correctly but docs are misleading/missing
-- Resolution: suggest updating docs, may use EnterPlanMode
+- Resolution: suggest updating docs, and offer `$planning:make` or a separate Plan task when planning is needed
 
 **E) Configuration issue**
 - System can do what user expects but isn't configured for it
@@ -144,7 +143,7 @@ User must understand the magnitude before deciding to proceed.
 
 #### Step 2: Present Options (if multiple approaches exist)
 
-When there are multiple valid solutions, use **AskUserQuestion** tool to present choices:
+When there are multiple valid solutions, use **Codex interactive input** when available to present choices. If it is unavailable, present the same choices in chat and wait for the user's answer:
 
 - List 2-4 options with clear trade-off descriptions
 - Put recommended option first with "(Recommended)" suffix
@@ -155,14 +154,14 @@ When there are multiple valid solutions, use **AskUserQuestion** tool to present
   - Issue is edge case that rarely occurs
 - Let user choose the approach
 
-#### Step 3: Proceed to Plan Mode
+#### Step 3: Prepare a Plan
 
 After user confirms or selects an approach:
 
-1. **Use EnterPlanMode** - Create implementation plan for the chosen approach
+1. **Offer `$planning:make` or a separate Plan task** - Create an implementation plan for the chosen approach
 2. Plan should reflect the scope assessment from Step 1
 
-**CRITICAL**: Do not attempt to fix issues without planning. Always use EnterPlanMode for:
+**CRITICAL**: Do not attempt to fix issues without planning. Always offer `$planning:make` or a separate Plan task for:
 - Bug fixes
 - Design changes
 - Missing features
@@ -185,9 +184,9 @@ After user confirms or selects an approach:
 [One of: Not an issue / Documentation issue / Real issue / Configuration issue]
 
 [If real issue]:
-This is a real issue that should be addressed. I recommend switching to plan mode to design a proper fix.
+This is a real issue that should be addressed. I recommend preparing a plan to design a proper fix.
 
-Should I enter plan mode to plan the solution?
+Should I create the plan with `$planning:make`, or would you prefer a separate Plan task?
 ```
 
 ## Guidelines
@@ -210,5 +209,5 @@ Should I enter plan mode to plan the solution?
 **Fixing:**
 - **Investigate first, then determine outcome**
 - If it's a misunderstanding -> explain clearly with evidence
-- If it's a real issue -> proceed to plan mode for fix
-- **Use EnterPlanMode when investigation confirms a genuine bug/flaw**
+- If it's a real issue -> offer a plan before fixing
+- **Use `$planning:make` or a separate Plan task when investigation confirms a genuine bug/flaw**

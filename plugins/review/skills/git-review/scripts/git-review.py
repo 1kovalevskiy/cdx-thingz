@@ -316,8 +316,7 @@ def open_editor(filepath: Path) -> int:
         return result.returncode
 
     # kitty: use sentinel file to detect when editor closes.
-    # requires KITTY_LISTEN_ON for socket communication — Claude Code runs
-    # without a TTY, so kitty @ can't auto-detect via /dev/tty.
+    # requires KITTY_LISTEN_ON for socket communication when no TTY is available.
     # kitty.conf needs: allow_remote_control yes + listen_on unix:/tmp/kitty-$KITTY_PID
     kitty_sock = os.environ.get("KITTY_LISTEN_ON")
     if kitty_sock and shutil.which("kitty"):
@@ -328,7 +327,7 @@ def open_editor(filepath: Path) -> int:
         wrapper = f'{editor_cmd} {shlex.quote(str(filepath))}; touch {shlex.quote(str(sentinel))}'
         cmd = ["kitty", "@", "--to", kitty_sock, "launch", "--type=overlay",
                f"--title=Git Review: {filepath.name}"]
-        # target the kitty window where claude is running, not the active one
+        # target the kitty window where the agent is running, not the active one
         kitty_wid = os.environ.get("KITTY_WINDOW_ID")
         if kitty_wid:
             cmd.extend(["--match", f"window_id:{kitty_wid}"])

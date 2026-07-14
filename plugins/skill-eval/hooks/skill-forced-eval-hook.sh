@@ -1,7 +1,7 @@
 #!/bin/sh
-# skill-forced-eval-hook.sh - UserPromptSubmit hook for Claude Code.
+# skill-forced-eval-hook.sh - UserPromptSubmit hook for Codex.
 #
-# forces Claude to evaluate and activate relevant skills before implementation.
+# forces Codex to evaluate and use relevant skills before implementation.
 
 cat <<'EOF'
 INSTRUCTION: MANDATORY SKILL ACTIVATION
@@ -9,18 +9,20 @@ INSTRUCTION: MANDATORY SKILL ACTIVATION
 Check available skills for relevance before proceeding.
 
 IF any skills are relevant:
-  1. State which skills and why (can be multiple)
-  2. Immediately activate ALL relevant skills with Skill(skill-name) tool calls
-  3. Then proceed with task
+  1. State which skills are relevant and why (there can be multiple)
+  2. Read every relevant skill's SKILL.md completely
+  3. Announce that you are using each selected skill
+  4. Follow all selected skill instructions, then proceed with the task
 
 IF no skills are relevant:
   - Proceed directly
 
-Example of multiple skills:
-  User asks "check mongo on server 192.168.1.111 for yesterday's data and report any issues"
-  → Activate: datetime (for "yesterday"), mongo (for query), ssh (for server access)
+Example with multiple bundled skills:
+  User asks "brainstorm this feature, then turn the approved design into an implementation plan"
+  → Select: brainstorm (for collaborative design), planning make (for the implementation plan)
+  → Read and follow both skills in workflow order
 
-CRITICAL: Activate ALL relevant skills via Skill() tool before implementation.
-Multiple skills can and should be activated when applicable.
-Mentioning a skill without activating it is worthless.
+CRITICAL: Read and follow ALL relevant skills before implementation.
+Multiple skills can and should be used when applicable.
+Mentioning a skill without reading and following it is worthless.
 EOF

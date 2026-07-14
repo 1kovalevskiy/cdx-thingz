@@ -1,29 +1,17 @@
 #!/usr/bin/env python3
-"""plan-annotate.py - PreToolUse hook for ExitPlanMode.
+"""Open a plan copy in an editor overlay and print the user's diff.
 
-interactive plan review hook that lets you annotate Claude's plans directly
-in your editor before approving them. when Claude calls ExitPlanMode, this
-hook intercepts the call, opens the plan in $EDITOR via a terminal overlay
-(agterm, tmux, kitty, or wezterm), and waits for you to review/edit. if you make changes,
-the hook computes a unified diff and sends it back to Claude as a denial
-reason, forcing Claude to revise the plan based on your annotations. if
-you make no changes, the normal approval dialog appears.
-
-this creates a feedback loop: annotate → Claude revises → annotate again →
-until you're satisfied and close the editor without changes.
+This is an explicit, file-based review helper used by the planning skills.
+The caller applies the printed annotations to the real plan and can run the
+helper again until the editor closes without changes.
 
 annotation style - edit the plan text directly in your editor:
   - add new lines to request additions (e.g., "add error handling here")
   - delete lines to request removal
   - modify lines to request changes (e.g., change "use polling" to "use websockets")
   - add inline comments after existing text (e.g., "- [ ] create handler - use JWT not sessions")
-any text change works - the hook diffs original vs edited and Claude sees
-exactly what you added, removed, or modified.
-
-hook receives JSON on stdin with the plan content in tool_input.plan field.
-returns PreToolUse hook JSON response with permissionDecision:
-  - "ask"  → no changes made, proceed to normal confirmation
-  - "deny" → changes detected, unified diff sent as denial reason
+any text change works; the unified diff shows exactly what was added,
+removed, or modified.
 
 requirements:
   - agterm, tmux, kitty, or wezterm terminal (agterm tried first, then tmux, kitty, wezterm)
@@ -36,29 +24,23 @@ requirements:
 terminal priority: agterm overlay → tmux display-popup → kitty overlay → wezterm split-pane → error
 
 limitations:
-  - requires agterm, tmux, kitty, or wezterm - without any, returns error (no annotation)
+  - requires agterm, tmux, kitty, or wezterm; otherwise the caller should
+    show the plan file and collect feedback in chat
   - does not work in plain terminals (iTerm2, Terminal.app, etc.)
   - kitty requires KITTY_LISTEN_ON env var (set by kitty when listen_on is configured)
-  - the hook blocks until the editor closes; timeout should be set high
-  - plan content comes from Claude's ExitPlanMode call, not from the plan
-    file on disk - if you edit the file on disk separately, those changes
-    won't be seen by this hook
-
-file mode (for /planning:make integration):
+  - the command blocks until the editor closes
 
     plan-annotate.py docs/plans/foo.md
 
-opens a copy of the plan file in $EDITOR. if user makes changes, outputs
-the unified diff to stdout (no JSON wrapping). Claude reads the diff,
-revises the plan file, and calls again - looping until no changes.
+opens a copy of the plan file in $EDITOR. if the user makes changes, it
+outputs the unified diff to stdout with no JSON wrapper.
 
 usage:
-    plan-annotate.py [--test]           # hook mode (stdin JSON)
-    plan-annotate.py <plan-file>        # file mode (opens file copy in editor)
+    plan-annotate.py <plan-file>
+    plan-annotate.py --test
 """
 
 import difflib
-import json
 import os
 import shlex
 import shutil
@@ -69,36 +51,9 @@ import time
 from pathlib import Path
 
 
-def read_plan_from_stdin() -> str:
-    """read plan content from hook event JSON on stdin."""
-    raw = sys.stdin.read()
-    if not raw.strip():
-        return ""
-    try:
-        event = json.loads(raw)
-        return event.get("tool_input", {}).get("plan", "")
-    except json.JSONDecodeError:
-        return ""
-
-
 def review_disabled() -> bool:
-    """report whether interactive plan review is disabled via PLANNING_DISABLE_REVDIFF.
-    set this on a remote client (claude /remote-control), where the editor overlay would
-    open on the host terminal the remote client can't see and block the session."""
+    """Return whether explicit file-mode editor review is disabled."""
     return bool(os.environ.get("PLANNING_DISABLE_REVDIFF"))
-
-
-def make_response(decision: str, reason: str = "") -> str:
-    """build PreToolUse hook JSON response."""
-    resp: dict = {
-        "hookSpecificOutput": {
-            "hookEventName": "PreToolUse",
-            "permissionDecision": decision,
-        }
-    }
-    if reason:
-        resp["hookSpecificOutput"]["permissionDecisionReason"] = reason
-    return json.dumps(resp, indent=2)
 
 
 def get_diff(original: str, edited: str) -> str:
@@ -127,13 +82,11 @@ def build_editor_cmd(editor: str) -> str:
     return " ".join(shlex.quote(p) for p in parts)
 
 
-def open_editor(filepath: Path, target_window: bool = True) -> int:
+def open_editor(filepath: Path) -> int:
     """open file in $EDITOR via a terminal overlay, blocking until the editor closes.
     tries agterm first (if $AGTERM_SESSION_ID is set), then tmux (if $TMUX), then kitty,
     then wezterm. returns non-zero if none is available.
-    when target_window is True (hook mode), targets the kitty window from KITTY_WINDOW_ID.
-    when False (file mode), opens in the currently focused window. agterm always targets the
-    current session via $AGTERM_SESSION_ID, so target_window does not affect it."""
+    The overlay opens in the currently focused window or pane."""
     editor_cmd = build_editor_cmd(os.environ.get("EDITOR", "vi"))
 
     # agterm: `agtermctl session overlay open <cmd> --block` opens the editor in a full-pane
@@ -178,8 +131,7 @@ def open_editor(filepath: Path, target_window: bool = True) -> int:
         return result.returncode
 
     # kitty: use sentinel file to detect when editor closes.
-    # requires KITTY_LISTEN_ON for socket communication — Claude Code runs
-    # without a TTY, so kitty @ can't auto-detect via /dev/tty.
+    # requires KITTY_LISTEN_ON for socket communication.
     # kitty.conf needs: allow_remote_control yes + listen_on unix:/tmp/kitty-$KITTY_PID
     kitty_sock = os.environ.get("KITTY_LISTEN_ON")
     if kitty_sock and shutil.which("kitty"):
@@ -190,11 +142,6 @@ def open_editor(filepath: Path, target_window: bool = True) -> int:
         wrapper = f'{editor_cmd} {shlex.quote(str(filepath))}; touch {shlex.quote(str(sentinel))}'
         cmd = ["kitty", "@", "--to", kitty_sock, "launch", "--type=overlay",
                f"--title=Plan Review: {filepath.name}"]
-        # in hook mode, target claude's window; in file mode, use focused window
-        if target_window:
-            kitty_wid = os.environ.get("KITTY_WINDOW_ID")
-            if kitty_wid:
-                cmd.extend(["--match", f"window_id:{kitty_wid}"])
         cmd.extend(["sh", "-c", wrapper])
         subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         while not sentinel.exists():
@@ -239,7 +186,7 @@ def run_file_mode(plan_file: Path) -> None:
         tmp_path = Path(tmp.name)
 
     try:
-        if open_editor(tmp_path, target_window=False) != 0:
+        if open_editor(tmp_path) != 0:
             print("error: no overlay terminal available (requires agterm, tmux, kitty, or wezterm)", file=sys.stderr)
             sys.exit(1)
 
@@ -252,64 +199,21 @@ def run_file_mode(plan_file: Path) -> None:
         tmp_path.unlink(missing_ok=True)
 
 
-def run_hook_mode() -> None:
-    """hook mode: read plan from stdin JSON, output hook response."""
-    if review_disabled():
-        print(make_response("ask", "plan review disabled via PLANNING_DISABLE_REVDIFF"))
-        return
-    plan_content = read_plan_from_stdin()
-    if not plan_content:
-        print(make_response("ask", "no plan content in hook event"))
-        return
-
-    # write plan to temp file for editing
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".md", prefix="plan-review-", delete=False) as tmp:
-        tmp.write(plan_content)
-        tmp_path = Path(tmp.name)
-
-    try:
-        if open_editor(tmp_path) != 0:
-            print(make_response("ask", "no overlay terminal available (requires agterm, tmux, kitty, or wezterm), skipping plan annotation"))
-            return
-
-        edited_content = tmp_path.read_text()
-        diff = get_diff(plan_content, edited_content)
-
-        if not diff:
-            print(make_response("ask", "plan reviewed, no changes"))
-        else:
-            feedback = (
-                "user reviewed the plan in an editor and made changes. "
-                "the diff below shows what the user modified (lines starting with - are original, + are user's version).\n"
-                "examine each diff hunk to understand the user's feedback:\n"
-                "- added lines (+) are user's annotations, comments, or requested additions\n"
-                "- removed lines (-) with replacement (+) show what the user wants changed\n"
-                "- removed lines (-) without replacement mean the user wants that removed\n"
-                "- context lines (no prefix) show surrounding plan content for reference\n\n"
-                f"{diff}\n"
-                "adjust the plan to address each annotation, then call ExitPlanMode again."
-            )
-            print(make_response("deny", feedback))
-    finally:
-        tmp_path.unlink(missing_ok=True)
-
-
 def main() -> None:
     import argparse
 
-    parser = argparse.ArgumentParser(description="plan annotation hook for ExitPlanMode")
+    parser = argparse.ArgumentParser(description="review a plan file in an editor overlay")
     parser.add_argument("--test", action="store_true", help="run unit tests")
-    parser.add_argument("plan_file", nargs="?", help="plan file path (file mode)")
+    parser.add_argument("plan_file", nargs="?", help="plan file path")
     args = parser.parse_args()
 
     if args.test:
         run_tests()
         return
 
-    if args.plan_file:
-        run_file_mode(Path(args.plan_file))
-    else:
-        run_hook_mode()
+    if not args.plan_file:
+        parser.error("plan_file is required unless --test is used")
+    run_file_mode(Path(args.plan_file))
 
 
 def run_tests() -> None:
@@ -348,62 +252,6 @@ def run_tests() -> None:
             self.assertIn("+note about A", diff)
             self.assertIn("+note about B", diff)
 
-    class TestReadPlanFromStdin(unittest.TestCase):
-        def test_valid_event(self) -> None:
-            import io
-            event = json.dumps({"tool_input": {"plan": "# My Plan\n- task 1"}})
-            old_stdin = sys.stdin
-            sys.stdin = io.StringIO(event)
-            try:
-                self.assertEqual(read_plan_from_stdin(), "# My Plan\n- task 1")
-            finally:
-                sys.stdin = old_stdin
-
-        def test_empty_stdin(self) -> None:
-            import io
-            old_stdin = sys.stdin
-            sys.stdin = io.StringIO("")
-            try:
-                self.assertEqual(read_plan_from_stdin(), "")
-            finally:
-                sys.stdin = old_stdin
-
-        def test_no_plan_field(self) -> None:
-            import io
-            old_stdin = sys.stdin
-            sys.stdin = io.StringIO(json.dumps({"tool_input": {}}))
-            try:
-                self.assertEqual(read_plan_from_stdin(), "")
-            finally:
-                sys.stdin = old_stdin
-
-        def test_invalid_json(self) -> None:
-            import io
-            old_stdin = sys.stdin
-            sys.stdin = io.StringIO("not json")
-            try:
-                self.assertEqual(read_plan_from_stdin(), "")
-            finally:
-                sys.stdin = old_stdin
-
-    class TestResponses(unittest.TestCase):
-        def test_ask_response(self) -> None:
-            result = json.loads(make_response("ask", "reviewed"))
-            out = result["hookSpecificOutput"]
-            self.assertEqual(out["hookEventName"], "PreToolUse")
-            self.assertEqual(out["permissionDecision"], "ask")
-
-        def test_deny_response(self) -> None:
-            result = json.loads(make_response("deny", "fix this"))
-            out = result["hookSpecificOutput"]
-            self.assertEqual(out["permissionDecision"], "deny")
-            self.assertIn("fix this", out["permissionDecisionReason"])
-
-        def test_special_chars_in_json(self) -> None:
-            result = make_response("deny", 'has "quotes" and\nnewlines')
-            parsed = json.loads(result)
-            self.assertIn("quotes", parsed["hookSpecificOutput"]["permissionDecisionReason"])
-
     class TestFileMode(unittest.TestCase):
         def test_file_not_found(self) -> None:
             path = Path("/tmp/nonexistent-plan-test-12345.md")
@@ -431,32 +279,8 @@ def run_tests() -> None:
         def test_review_disabled_flag(self) -> None:
             self.assertTrue(review_disabled())
 
-        def test_file_mode_no_output(self) -> None:
-            import io
-            tmp = Path(tempfile.mktemp(suffix=".md"))
-            tmp.write_text("# Plan\n- task 1\n")
-            buf, old = io.StringIO(), sys.stdout
-            sys.stdout = buf
-            try:
-                run_file_mode(tmp)
-            finally:
-                sys.stdout = old
-                tmp.unlink(missing_ok=True)
-            self.assertEqual(buf.getvalue(), "")
-
-        def test_hook_mode_ask(self) -> None:
-            import io
-            event = json.dumps({"tool_input": {"plan": "# Plan\n- task 1"}})
-            old_stdin, old_stdout = sys.stdin, sys.stdout
-            sys.stdin, buf = io.StringIO(event), io.StringIO()
-            sys.stdout = buf
-            try:
-                run_hook_mode()
-            finally:
-                sys.stdin, sys.stdout = old_stdin, old_stdout
-            out = json.loads(buf.getvalue())["hookSpecificOutput"]
-            self.assertEqual(out["permissionDecision"], "ask")
-            self.assertIn("disabled", out["permissionDecisionReason"])
+        def test_file_mode_skips_before_file_access(self) -> None:
+            run_file_mode(Path("/tmp/nonexistent-disabled-plan.md"))
 
     class TestBuildEditorCmd(unittest.TestCase):
         def test_single_word_resolves_to_abs_path(self) -> None:
@@ -485,8 +309,7 @@ def run_tests() -> None:
 
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()
-    for tc in [TestGetDiff, TestReadPlanFromStdin, TestResponses, TestFileMode, TestDisableReview,
-               TestBuildEditorCmd]:
+    for tc in [TestGetDiff, TestFileMode, TestDisableReview, TestBuildEditorCmd]:
         suite.addTests(loader.loadTestsFromTestCase(tc))
     runner = unittest.TextTestRunner(verbosity=2)
     result = runner.run(suite)

@@ -1,18 +1,20 @@
 # Fixer prompt
 
+The orchestrator must replace `STAGE_AND_COMMIT_SCRIPT`, `APPEND_PROGRESS_SCRIPT`, `PROGRESS_FILE_PATH`, and `FINDINGS_LIST` before spawning this subagent. Both script placeholders must be absolute paths. If any placeholder remains unresolved, stop and report the invalid prompt instead of running a command.
+
 Use this for the fixer agent after collecting review findings (replace `PLAN_FILE_PATH`, `PROGRESS_FILE_PATH` and `FINDINGS_LIST`):
 
 ```
 Code review found the following issues. Verify and fix them.
 
 Plan file: PLAN_FILE_PATH (read it to find validation commands in the "## Validation Commands" section)
-Progress file: PROGRESS_FILE_PATH (read it for context on what previous iterations found and fixed)
+Progress file: "PROGRESS_FILE_PATH" (read it for context on what previous iterations found and fixed)
 
 FINDINGS:
 FINDINGS_LIST
 
 AUTONOMOUS MODE — NO HUMAN IS AVAILABLE:
-You run unattended. NOBODY is watching to answer questions. NEVER ask the user anything — do NOT call AskUserQuestion, do NOT pause for input or approval. Asking blocks the entire run. When a fix involves a judgment call the finding does not settle, decide it yourself from the project's lint rules, CLAUDE.md, and the surrounding code's dominant pattern; when genuinely 50/50, take the smaller, more reversible option. Record any non-obvious decision or plan deviation in STEP 5.
+You run unattended. NOBODY is watching to answer questions. NEVER ask the user anything — do NOT call interactive user input, do NOT pause for input or approval. Asking blocks the entire run. When a fix involves a judgment call the finding does not settle, decide it yourself from the project's lint rules, AGENTS.md, and the surrounding code's dominant pattern; when genuinely 50/50, take the smaller, more reversible option. Record any non-obvious decision or plan deviation in STEP 5.
 
 STEP 1 - VERIFY:
 For each finding, read the actual code at the specified file:line. Check 20-30 lines of context. Classify as:
@@ -28,17 +30,17 @@ STEP 3 - VALIDATE (MANDATORY — code MUST compile and tests MUST pass before co
 - NEVER commit broken code
 
 STEP 4 - COMMIT (only after STEP 3 passes with zero errors):
-- Commit fixes: bash ${CLAUDE_PLUGIN_ROOT}/skills/exec/scripts/stage-and-commit.sh "fix: address code review findings" <changed-files>
+- Commit fixes: bash "STAGE_AND_COMMIT_SCRIPT" "fix: address code review findings" "file1" "file2" ...
 
 STEP 5 - LOG PROGRESS (after commit):
 Log details: echo "- confirmed: <list>
 - false positives: <list>
 - fixes: <what changed>
-- validation: <what passed>" | bash ${CLAUDE_PLUGIN_ROOT}/skills/exec/scripts/append-progress.sh PROGRESS_FILE_PATH
+- validation: <what passed>" | bash "APPEND_PROGRESS_SCRIPT" "PROGRESS_FILE_PATH"
 IMPORTANT: Use ONLY the append-progress.sh script. Do NOT use cat >>, echo >>, or heredocs directly.
 If you made any judgment call the finding did not settle, or deviated from the plan, log each as its own line so the orchestrator can report it to the user (one append per entry):
-bash ${CLAUDE_PLUGIN_ROOT}/skills/exec/scripts/append-progress.sh PROGRESS_FILE_PATH "[decision] fixer: <what you decided> — <why>"
-bash ${CLAUDE_PLUGIN_ROOT}/skills/exec/scripts/append-progress.sh PROGRESS_FILE_PATH "[deviation] fixer: <how it differs from the plan> — <why>"
+bash "APPEND_PROGRESS_SCRIPT" "PROGRESS_FILE_PATH" "[decision] fixer: <what you decided> — <why>"
+bash "APPEND_PROGRESS_SCRIPT" "PROGRESS_FILE_PATH" "[deviation] fixer: <how it differs from the plan> — <why>"
 
 STEP 6 - REPORT (MANDATORY — this is your return value to the parent):
 Your final response MUST include a structured summary starting with "FIXES:" on its own line, followed by one line per fix:

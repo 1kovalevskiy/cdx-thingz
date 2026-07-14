@@ -1,0 +1,8 @@
+{
+  "name": "brainstorm", "version": "3.0.0",
+  "description": "Collaborative design dialogue from idea to implementation-ready design.",
+  "author": { "name": "1kovalevskiy", "url": "https://github.com/1kovalevskiy" },
+  "homepage": "https://github.com/1kovalevskiy/cdx-thingz", "repository": "https://github.com/1kovalevskiy/cdx-thingz", "license": "MIT",
+  "keywords": ["brainstorming", "design", "architecture"], "skills": "./skills/",
+  "interface": { "displayName": "Brainstorm", "shortDescription": "Collaborative software design", "longDescription": "Explore requirements, compare approaches, and turn an idea into an implementation-ready design.", "developerName": "1kovalevskiy", "category": "Developer Tools", "capabilities": ["Interactive", "Read"], "defaultPrompt": ["Help me design this feature.", "Explore implementation options for this change."] }
+}

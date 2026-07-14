@@ -1,12 +1,11 @@
 ---
 name: learn
-description: Update project CLAUDE.md with strategic knowledge discovered during this session — or CLAUDE.local.md when the discovery is per-developer/per-checkout and that file already exists. Defers to any project-defined memory-placement guidance instead of overriding it. Use when user says "learn", "save knowledge", "update claude.md", "capture learnings", or at end of significant work sessions. Also used by commit skill for pre-commit knowledge capture.
-allowed-tools: Read, Edit, AskUserQuestion
+description: Update project AGENTS.md with strategic knowledge discovered during this session, or Codex Local Memories when the discovery is personal or machine-specific. Defers to project guidance instead of overriding it. Use when user says "learn", "save knowledge", "update agents.md", "capture learnings", or at end of significant work sessions. Also used by commit skill for pre-commit knowledge capture.
 ---
 
 # Learn
 
-Review the current conversation history and identify strategic, reusable project knowledge that should be captured in the project CLAUDE.md file. When the project has opted into Claude Code's three-tier memory convention by creating `CLAUDE.local.md`, route genuinely personal or environment-specific discoveries there instead.
+Review the current conversation history and identify strategic, reusable knowledge. Route team-shared repository knowledge to the applicable project `AGENTS.md`; route genuinely personal or environment-specific discoveries to the native Codex Local Memories surface.
 
 ## Analysis Process
 
@@ -33,18 +32,16 @@ Review the current conversation history and identify strategic, reusable project
 
 ## Destinations
 
-This skill writes to one of two files in the project root:
+This skill writes to one of two Codex knowledge surfaces:
 
-- **`CLAUDE.md`** (project memory, committed, team-shared) — the default destination. Use for architecture, conventions, integration patterns, and any other knowledge useful to the whole team.
-- **`CLAUDE.local.md`** (local memory, gitignored personal overrides) — used only when **both** conditions hold:
-  1. `CLAUDE.local.md` already exists in the project (the project has opted into the three-tier memory convention).
-  2. The discovery describes per-developer / per-checkout state — not just *mentions* something personal, but the knowledge itself is meaningful only to the current developer on this machine. Examples: a tool-loading workaround that depends on this developer's interpreter / runtime setup, a personal alias, a per-checkout env override.
+- **`AGENTS.md`** (project memory, committed, team-shared) — the default destination. Use for architecture, conventions, integration patterns, and any other knowledge useful to the whole team.
+- **Codex Local Memories** (native personal memory) — used when the discovery describes per-developer / per-checkout state: a tool-loading workaround that depends on this developer's runtime setup, a personal alias, or a per-checkout environment override.
 
-  **Counter-example:** *"We keep credentials in `~/.aws/credentials`"* mentions a user-home path but describes a team-wide convention — the path is illustrative, not per-developer state. Such notes belong in project CLAUDE.md. When in doubt about whether a discovery is genuinely personal, default to project CLAUDE.md.
+  **Counter-example:** *"We keep credentials in `~/.aws/credentials`"* mentions a user-home path but describes a team-wide convention — the path is illustrative, not per-developer state. Such notes belong in project AGENTS.md. When in doubt about whether a discovery is genuinely personal, default to project AGENTS.md.
 
-This skill never writes to the user's global `~/.claude/CLAUDE.md` (user memory) — only reads it to avoid duplicating cross-project knowledge.
+Never emulate Local Memories with a repository file, dotfile, or hardcoded filesystem path. If the current Codex surface does not expose memory saving, show the proposed memory and report that it was not persisted.
 
-**Default for ambiguous cases: project CLAUDE.md.** Leaking personal config into a committed file is a loud error that reviewers catch quickly; hiding project-wide knowledge in a gitignored personal file is a silent error that rots over time.
+**Default for ambiguous cases: project AGENTS.md.** Leaking personal config into a committed file is a loud error that reviewers catch quickly; hiding project-wide knowledge in a gitignored personal file is a silent error that rots over time.
 
 ## What Qualifies
 
@@ -86,31 +83,31 @@ Ask yourself for each discovery:
 ## Workflow
 
 ### 1. Check for Existing Memory-Placement Guidance
-Before applying the routing rules below, scan the project's root `CLAUDE.md`, any `.claude/rules/*.md` files, and the user's global `~/.claude/CLAUDE.md` for documented memory-placement guidance — for example, a placement decision tree, an instruction to use a project-specific triage command, or specific destinations beyond `CLAUDE.md` / `CLAUDE.local.md`. If such guidance exists, defer to it: follow the documented workflow or place each discovery according to its rules instead of using this skill's defaults. The remaining steps apply only when no such guidance is found.
+Before applying the routing rules below, scan all applicable project `AGENTS.md` files, `${CODEX_HOME:-$HOME/.codex}/AGENTS.md`, and accessible Local Memories for documented memory-placement guidance. Do not use `AGENTS.override.md`, because it replaces nearby guidance instead of supplementing it. If guidance exists, follow it instead of using this skill's defaults.
 
 ### 2. Check Existing Memory Content
-Read the current content of project `CLAUDE.md`, `CLAUDE.local.md` (if present), and the user's global `~/.claude/CLAUDE.md` to avoid duplication — including cross-project entries already captured in user memory.
+Read the applicable project `AGENTS.md`, `${CODEX_HOME:-$HOME/.codex}/AGENTS.md`, and accessible Local Memories to avoid duplication, including cross-project entries already captured in user memory.
 
 ### 3. Early Exit if Nothing Found
 If no new strategic knowledge was discovered during this session:
 - Report "no new strategic knowledge to capture"
-- Do NOT use AskUserQuestion tool
+- Do NOT ask for confirmation
 - End the skill execution
 
 ### 4. Classify Each Discovery
-For each discovery, determine its destination per the [Destinations](#destinations) rules: default to project CLAUDE.md, and route to `CLAUDE.local.md` only when both file-exists and personal-content criteria are met (and the counter-example caveat doesn't apply).
+For each discovery, determine its destination per the [Destinations](#destinations) rules: default to project `AGENTS.md`, and route only genuinely personal or machine-specific content to Codex Local Memories.
 
 ### 5. New Knowledge to Add
 Present discovered knowledge formatted for the chosen destination, tagging each block with its inferred file:
 ```markdown
-## [Section Name] → project CLAUDE.md
+## [Section Name] → project AGENTS.md
 - Discovery 1
 - Discovery 2
 ```
 
-### 6. User Confirmation with AskUserQuestion Tool
+### 6. User Confirmation with Codex interactive input
 
-**CRITICAL**: Use AskUserQuestion tool for granular selection of what to save.
+**CRITICAL**: Use Codex interactive input when available for granular selection of what to save. If it is unavailable, present the same granular choices in chat and wait for the user's answer.
 
 Build options dynamically based on discoveries:
 - First option: "All knowledge" - save everything to its inferred destination
@@ -124,9 +121,9 @@ question: "Which knowledge should I save?"
 options:
   - label: "All (3 items)"
     description: "Save all discovered patterns to their inferred destinations"
-  - label: "Service discovery pattern → project CLAUDE.md"
+  - label: "Service discovery pattern → project AGENTS.md"
     description: "Project-wide convention for how modules find each other"
-  - label: "Local toolchain variant → CLAUDE.local.md"
+  - label: "Local toolchain variant → Codex Local Memories"
     description: "Per-checkout build runner override (only relevant on this machine)"
   - label: "None"
     description: "Skip saving, nothing worth keeping"
@@ -136,7 +133,7 @@ Example with 1 discovery:
 ```yaml
 question: "Save this knowledge?"
 options:
-  - label: "Yes → project CLAUDE.md"
+  - label: "Yes → project AGENTS.md"
     description: "Save: [brief description of the discovery]"
   - label: "No"
     description: "Skip saving"
@@ -150,9 +147,9 @@ After user selection:
 
 ## Important Guidelines
 - Only capture genuinely new discoveries from this session
-- Don't duplicate existing project CLAUDE.md, `CLAUDE.local.md`, or user CLAUDE.md content
+- Don't duplicate existing project AGENTS.md, `Codex Local Memories`, or user AGENTS.md content
 - Focus on patterns observed, not specific code written
 - Keep descriptions concise and actionable
-- MUST use AskUserQuestion tool for confirmation (not plain text questions)
+- MUST obtain confirmation through Codex interactive input when available; otherwise use the same explicit choices in chat and wait for the user's answer
 - If no knowledge found, exit early without asking
 - **Defer to project- or user-level memory-placement guidance discovered in step 1** — do not override existing conventions with this skill's defaults

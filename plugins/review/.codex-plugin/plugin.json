@@ -1,0 +1,8 @@
+{
+  "name": "review", "version": "3.0.0",
+  "description": "Pull request, local diff, and technical writing review workflows.",
+  "author": { "name": "1kovalevskiy", "url": "https://github.com/1kovalevskiy" },
+  "homepage": "https://github.com/1kovalevskiy/cdx-thingz", "repository": "https://github.com/1kovalevskiy/cdx-thingz", "license": "MIT",
+  "keywords": ["review", "pull-request", "git"], "skills": "./skills/",
+  "interface": { "displayName": "Review", "shortDescription": "PR and local-change reviews", "longDescription": "Review pull requests and local diffs, run validation, draft comments, and apply a direct technical writing style.", "developerName": "1kovalevskiy", "category": "Developer Tools", "capabilities": ["Interactive", "Read", "Write"], "defaultPrompt": ["Review this pull request.", "Review my local changes interactively."] }
+}

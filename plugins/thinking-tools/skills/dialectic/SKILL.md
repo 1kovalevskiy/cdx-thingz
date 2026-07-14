@@ -1,8 +1,6 @@
 ---
 name: dialectic
 description: Prove and counter-prove a statement using parallel agents to eliminate confirmation bias. Use when someone says "dialectic", "prove/disprove", "stress test this claim", "is this really true", "argue both sides", or when a statement needs objective analysis from opposing viewpoints.
-argument-hint: '<statement to analyze>'
-allowed-tools: Bash, Read, Grep, Glob, Task, AskUserQuestion
 ---
 
 # Dialectic Analysis
@@ -13,7 +11,7 @@ Objective analysis of a statement by running two agents with opposing goals in p
 
 ### Step 1: Launch Parallel Agents
 
-**CRITICAL: Both Task tool calls MUST be in a single message for true parallel execution.** Do NOT use run_in_background. Do NOT launch sequentially. Foreground agents in the same message run in parallel and block until both complete.
+**CRITICAL: Call `spawn_agent` for both agents before waiting.** Do NOT launch sequentially. After both are running, collect each with `wait_agent`.
 
 **Agent 1 (Thesis)** — find all POSITIVE evidence:
 - what works well, improvements, correct patterns
@@ -48,32 +46,32 @@ After both agents complete, synthesize findings into an objective conclusion:
 
 **Architecture decisions:**
 ```
-/thinking-tools:dialectic this microservice split improves maintainability
+$thinking-tools:dialectic this microservice split improves maintainability
 ```
 
 **Bug analysis:**
 ```
-/thinking-tools:dialectic the connection pool fixes the timeout issue
+$thinking-tools:dialectic the connection pool fixes the timeout issue
 ```
 
 **Performance claims:**
 ```
-/thinking-tools:dialectic caching reduced database load by 80%
+$thinking-tools:dialectic caching reduced database load by 80%
 ```
 
 **Refactoring safety:**
 ```
-/thinking-tools:dialectic extracting this interface simplifies testing
+$thinking-tools:dialectic extracting this interface simplifies testing
 ```
 
 **Code review:**
 ```
-/thinking-tools:dialectic this implementation is thread-safe
+$thinking-tools:dialectic this implementation is thread-safe
 ```
 
 **Review changes:**
 ```
-/thinking-tools:dialectic review the changes in server.go
+$thinking-tools:dialectic review the changes in server.go
 ```
 
 ## Key Principles

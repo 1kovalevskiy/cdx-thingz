@@ -1,7 +1,6 @@
 ---
 name: last-tag
 description: Show commits since the last tag in a formatted table. Use when user asks "what changed since last release", "commits since last tag", "last-tag", "what's new", or wants to see recent unreleased changes.
-allowed-tools: Bash, AskUserQuestion
 ---
 
 # Last Tag - Commits Since Last Release
@@ -73,7 +72,7 @@ No commits since this tag
 
 ## Interactive Details
 
-After displaying the table, use AskUserQuestion:
+After displaying the table, use Codex interactive input when available. If it is unavailable, present the same options as a concise question in chat and wait for the user's answer:
 
 ```
 question: "Show commit details?"

@@ -9,7 +9,7 @@ The brainstorm skill activates on:
 - "explore options for"
 - any request for thorough analysis of changes, features, or architectural decisions
 
-Invoke directly with `/brainstorm:brainstorm` or let it activate via intent matching.
+Invoke directly with `$brainstorm:brainstorm` or let it activate via intent matching.
 
 ## Workflow Phases
 
@@ -29,8 +29,8 @@ Invoke directly with `/brainstorm:brainstorm` or let it activate via intent matc
 - covers architecture, components, data flow, error handling, testing
 
 ### Phase 4: Next Steps
-- **Write plan** — invokes `/planning:make` passing brainstorm context
-- **Plan mode** — enters structured plan mode for detailed planning
+- **Write plan** — invokes `$planning:make` passing brainstorm context
+- **Finish design** — stops with the approved design for later implementation
 - **Start now** — begins implementing directly
 
 ## Examples
@@ -40,7 +40,7 @@ User: "let's brainstorm how to add caching to the API"
 → Phase 1: asks about cache scope, invalidation needs, performance goals
 → Phase 2: proposes in-memory LRU, Redis, HTTP cache headers
 → Phase 3: details selected approach section by section
-→ Phase 4: user picks "Write plan" → /planning:make runs with full context
+→ Phase 4: user picks "Write plan" → $planning:make runs with full context
 
 User: "brainstorm a better error handling strategy"
 → Phase 1: examines current error patterns, asks about requirements
@@ -48,8 +48,8 @@ User: "brainstorm a better error handling strategy"
 → Phase 3: designs the selected approach incrementally
 → Phase 4: user picks "Start now" → implementation begins
 
-User: "/brainstorm:brainstorm add my Go rules to user-level brainstorm rules"
-→ asks what rules to add, writes to $CLAUDE_PLUGIN_DATA/brainstorm-rules.md
+User: "$brainstorm:brainstorm add my Go rules to user-level brainstorm rules"
+→ asks what rules to add, writes to ${CODEX_HOME:-$HOME/.codex}/brainstorm-rules.md
 ```
 
 ## Key Principles

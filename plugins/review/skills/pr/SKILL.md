@@ -1,8 +1,6 @@
 ---
 name: pr
 description: Comprehensive PR/issue review - analyzes architecture, tests, identifies unrelated changes mixed in, drafts review comment or issue comment. Use when user asks to review a PR, check a PR, look at PR changes, or comment on an issue.
-argument-hint: '<pr-or-issue-number>'
-allowed-tools: Bash, Read, Grep, Glob, Write, Skill, AskUserQuestion, Task
 ---
 
 # PR Review Skill
@@ -22,7 +20,7 @@ Comprehensive pull request review that analyzes code quality, architecture, test
 1. Fetch PR metadata + discussion history + merge status
 1.5. Ask review mode: Full (default) or Quick
 --- Full path ---
-2. Setup worktree, launch subagent for deep analysis (read files, validate, architecture, scope creep, cleanup)
+2. Use the current Codex checkout, launch subagent for deep analysis (read files, validate, architecture, scope creep, cleanup)
 3. Present condensed findings from subagent, ask to proceed
 4. Resolve open questions (if any)
 5. Draft review comment
@@ -67,7 +65,7 @@ COMMENT_END
 gh issue comment <number> --body-file /tmp/issue-comment.md
 ```
 
-Use AskUserQuestion before posting:
+Use Codex interactive input before posting when available. If it is unavailable, present the same choices in chat and wait for explicit confirmation:
 ```
 question: "Post this comment to issue #<number>?"
 header: "Comment"
@@ -225,23 +223,25 @@ After presenting the summary and any flagged issues, skip directly to Phase 5 (D
 
 **CRITICAL: Delegate all file reading, validation, and architecture analysis to a subagent** to protect the main conversation's context window. The subagent does the heavy lifting and returns a condensed report.
 
-### 2.1 Setup Worktree (in main conversation)
+### 2.1 Select checkout (in main conversation)
 
-Create the worktree before launching the subagent:
+Use the checkout already selected for the Codex task:
 
-```bash
-# fetch the PR ref directly (does NOT affect current checkout)
-git fetch origin pull/<number>/head:pr-<number>
+- record the current commit as `<review_restore_ref>` with `git rev-parse HEAD` and the current branch as `<review_restore_branch>` with `git branch --show-current`;
+- require a clean checkout before changing revisions; never stash, overwrite, or discard user changes;
+- in a Codex Worktree, fetch the PR ref into a temporary review ref and detach the selected worktree at that exact PR commit:
+  ```bash
+  git fetch origin +pull/<number>/head:refs/codex-review/pr-<number>
+  git checkout --detach refs/codex-review/pr-<number>
+  ```
+- in Local mode, do not create a hidden nested worktree. Ask whether to perform the same temporary detached checkout in place or stop so the user can restart the task in Worktree mode. Do not switch revisions without explicit confirmation;
+- verify `git rev-parse HEAD` equals `git rev-parse refs/codex-review/pr-<number>` before launching the analysis subagent. If it does not, stop instead of reviewing the wrong code.
 
-# create worktree from the fetched ref
-git worktree add "/tmp/pr-review-<number>" pr-<number>
-```
-
-**Do NOT use `gh pr checkout`** - it switches the main repo's branch, which is disruptive during a review.
+Capture the active directory as `<review_path>` and pass it to every review subagent.
 
 ### 2.2 Launch Analysis Subagent
 
-Use the **Task tool** with `subagent_type: "general-purpose"` to run the full analysis. Pass all context the subagent needs in the prompt:
+Use `spawn_agent` to run the full analysis, then collect it with `wait_agent`. Pass all context the subagent needs in the prompt:
 
 ```
 prompt: |
@@ -253,16 +253,16 @@ prompt: |
   - Files: <file list from Phase 1>
   - Discussion summary: <from Phase 1.1>
 
-  **Worktree location:** /tmp/pr-review-<number>
+  **Review checkout:** <review_path>
   **Repo location:** <repo_path>
 
   **Your tasks (do all of these):**
 
-  1. **Read changed files** - read each changed file in full from the worktree
+  1. **Read changed files** - read each changed file in full from the review checkout
      to understand context, not just the diff. Focus on what the code actually
      does vs what the PR description claims.
 
-  2. **Run validation** - from the worktree directory:
+  2. **Run validation** - from the review checkout:
      - Run project test suite (e.g., `npm test`, `pytest`, `go test ./...`, etc.)
      - Run project linter (e.g., `eslint .`, `ruff check`, `golangci-lint run`, etc.)
      - Run race/concurrency checks if applicable (e.g., thread sanitizer, `-race` flag, etc.)
@@ -283,7 +283,7 @@ prompt: |
      - Related cleanup (minor fixes in touched files)
      - Unrelated (doesn't connect to PR purpose)
 
-  **IMPORTANT: Do NOT clean up the worktree.** The main conversation handles cleanup after all review phases complete.
+  **IMPORTANT: Do not switch branches, create worktrees, or clean up the checkout.** The main conversation owns checkout state.
 
   **Return a structured report with these sections:**
   - **Functionality**: 3-5 sentence explanation of what the PR does
@@ -306,7 +306,7 @@ The subagent returns a condensed report. This is what enters the main conversati
 
 Present the subagent's report to the user.
 
-Use AskUserQuestion to confirm next step:
+Use Codex interactive input when available to confirm the next step. If it is unavailable, present the same choices in chat and wait for the user's answer:
 
 ```
 question: "How would you like to proceed?"
@@ -370,11 +370,7 @@ If user already covered everything and there's nothing new → say "no new findi
 
 ### 5.2 Draft Comment
 
-Activate writing-style skill for proper tone:
-
-```
-/review:writing-style
-```
+Read the sibling `../writing-style/SKILL.md` completely and apply it for proper tone. Do not invoke a separate skill tool.
 
 **CRITICAL: Don't restate what the PR does.** The author knows what they built. Focus only on:
 - Issues that need fixing
@@ -431,9 +427,9 @@ Always display the complete draft review as a text block before asking:
 --- End Draft ---
 ```
 
-### Ask User via AskUserQuestion
+### Ask User via Codex interactive input
 
-Use AskUserQuestion tool with these options:
+Use Codex interactive input with these options when available. If it is unavailable, present the same options in chat and wait for explicit confirmation:
 
 ```
 question: "Post this review to PR #<number>?"
@@ -506,17 +502,9 @@ If merge fails (CI not passing, conflicts, branch protection), report the error 
 
 **Cancel**: Acknowledge and stop.
 
-### Cleanup Worktree
+### Cleanup Review State
 
-**After the review is fully complete** (comment posted, user cancelled, or user said "Done"), clean up:
-
-```bash
-cd <repo_path>
-git worktree remove "/tmp/pr-review-<number>" --force 2>/dev/null || true
-git branch -D pr-<number> 2>/dev/null || true
-```
-
-This must happen AFTER all phases are done - the worktree is needed for follow-up investigations in Phases 3-4.
+**After the review is fully complete** (comment posted, user cancelled, or user said "Done"), restore `<review_restore_branch>` with `git checkout <review_restore_branch>` when it is non-empty; otherwise restore the original detached commit with `git checkout --detach <review_restore_ref>`. Verify that `git rev-parse HEAD` equals `<review_restore_ref>`, then delete only the temporary ref with `git update-ref -d refs/codex-review/pr-<number>`. Remove temporary files created by the review. Never remove the Codex Worktree or delete a user branch. Cleanup happens after all phases because the PR checkout is needed for follow-up investigations in Phases 3-4.
 
 ## Examples
 
@@ -558,7 +546,7 @@ User: "review pr 73"
 ```
 User: "review pr 95"
 → Phase 1: fetch metadata, +200/-30, 6 files
-→ Phase 1.5: [AskUserQuestion] "Review mode?" → user selects Quick
+→ Phase 1.5: [Codex interactive input] "Review mode?" → user selects Quick
 → Q1: read diff, summarize: adds configurable tenant for auth
 → Q2: no obvious issues, tests included
 → Q3: draft and post "lgtm"
@@ -571,7 +559,7 @@ User: "review pr 89"
 → Phase 2: launch subagent → reads files, 2 test failures, open question
     about Section type change
 → Phase 3: present condensed report
-→ Phase 4: [AskUserQuestion] "Section type change: Accept typed approach?"
+→ Phase 4: [Codex interactive input] "Section type change: Accept typed approach?"
   → User: "Accept"
 → User: "draft the review"
 → Phase 5: draft review noting test failures, user's acceptance of Section approach
@@ -587,7 +575,7 @@ User: "review pr 89"
 - **simplicity bias** - always ask "could this be simpler?" and suggest concrete alternatives
 - **project patterns matter** - code should look like it belongs in the existing codebase
 - **over-engineering is a bug** - unnecessary abstraction is as problematic as missing abstraction
-- never switch the main repo's branch during review - use `git fetch` + worktree
+- never switch the main repo's branch during review; use the existing Codex Worktree or explicitly approved in-place review
 - use writing-style skill for review comments
 - be specific about file:line when noting issues
 - distinguish "unrelated but acceptable" (linter fixes) from "unrelated and problematic" (refactoring)
