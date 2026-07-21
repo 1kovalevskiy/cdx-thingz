@@ -1,6 +1,7 @@
 ---
 name: exec
 description: "Execute plan tasks sequentially using subagents. Use when user says 'exec', 'execute plan', 'run plan', or wants to implement a plan file task by task with isolated subagents."
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash(bash:*), Agent, AskUserQuestion, TaskCreate, TaskUpdate, EnterWorktree
 ---
 
 # exec
@@ -12,6 +13,20 @@ Execute plan file tasks sequentially, each in an isolated subagent.
 ## Arguments
 
 - `$ARGUMENTS` — path to plan file (optional; if omitted, ask user to pick from `PLANNING_PLANS_DIR`, default: `docs/plans/`)
+
+## Configuration
+
+Before resolving the plan or starting any work, read the planning configuration from the environment via Bash and retain the resolved values for the entire run:
+
+```bash
+printf 'plans_dir=%s\ntask_retries=%s\nreview_iterations=%s\nfinalize_enabled=%s\n' \
+  "${PLANNING_PLANS_DIR:-docs/plans}" \
+  "${PLANNING_TASK_RETRIES:-1}" \
+  "${PLANNING_REVIEW_ITERATIONS:-5}" \
+  "${PLANNING_FINALIZE_ENABLED:-1}"
+```
+
+`task_retries` and `review_iterations` must be non-negative integers. `finalize_enabled` must be `0` or `1`. If a value is invalid, stop before modifying the repository and report the invalid variable. Use `plans_dir`, `task_retries`, `review_iterations`, and `finalize_enabled` below instead of re-reading the environment or relying on implicit substitution.
 
 ## File Resolution
 
@@ -34,7 +49,7 @@ If the output is non-empty, store it as the resolved custom rules content. When 
 
 ### Step 1. Resolve plan file
 
-If `$ARGUMENTS` contains a file path, use it. Otherwise, list `.md` files in the `PLANNING_PLANS_DIR` directory (default: `docs/plans/`), excluding `completed/`. If exactly one plan found, use it automatically. If multiple found, ask the user to pick one using Codex interactive input when available, with a concise text fallback.
+If `$ARGUMENTS` contains a file path, use it. Otherwise, list `.md` files in the resolved `plans_dir`, excluding `completed/`. If exactly one plan found, use it automatically. If multiple found, ask the user to pick one using Codex interactive input when available, with a concise text fallback.
 
 Read the plan file. Count total Task sections (`### Task N:` or `### Iteration N:`) to know the scope.
 
@@ -96,7 +111,7 @@ Repeat until no `[ ]` checkboxes remain in any Task section:
 5. **Spawn a subagent** with `spawn_agent` using the task prompt from `prompts/task.md`, with all placeholders substituted as described above (including `USER_RULES`). Start exactly one implementation agent, then collect it with `wait_agent`. It inherits the current sandbox and approval profile.
 6. **After subagent returns**, re-read the plan file and check if that task's checkboxes are now `[x]`
    - If yes — task succeeded, continue loop
-   - If no — **retry** with a fresh subagent for the same task up to `PLANNING_TASK_RETRIES` times (default: 1). If all retries fail, stop and report failure to user
+   - If no — **retry** with a fresh subagent for the same task up to the resolved `task_retries` count. If all retries fail, stop and report failure to user
 7. **Report to user**: "Task N completed" (one line). The task subagent logs details to the progress file.
 
 CRITICAL: Spawn exactly ONE task subagent per iteration and WAIT for it to return before starting the next. NEVER batch-spawn multiple task subagents in a single message. Plan tasks are ordered and interdependent — later tasks build on the files earlier tasks create, and every task subagent edits the same plan-file checkboxes and overlapping source files, so running them in parallel corrupts the plan and the working tree. Parallel execution applies ONLY to the independent review agents in steps 7 and 9, never to this task loop.
@@ -113,7 +128,7 @@ After all tasks complete, run a comprehensive code review on iteration 1, then n
 
 Report to user: "--- Review phase 1: comprehensive ---"
 
-Loop up to `PLANNING_REVIEW_ITERATIONS` times (default: 5). Track the current iteration number:
+Loop up to the resolved `review_iterations` count. Track the current iteration number:
 
 1. **Read review.md as a playbook (NOT as a subagent prompt)** — resolve `prompts/review.md` through the override chain and read it from this main session. It tells YOU (the orchestrator) which specialist agents to fan out for the current `REVIEW_PHASE`. Substitute `DEFAULT_BRANCH`, `PLAN_FILE_PATH`, `PROGRESS_FILE_PATH`, `RESOLVE_SCRIPT`, and `REVIEW_PHASE` in the resolved content. Then follow the playbook FROM THIS SESSION: call `spawn_agent` for every specified reviewer before waiting, then collect them with `wait_agent`. The fanout MUST be initiated from the main orchestrator.
    - **Iteration 1**: set `REVIEW_PHASE` to `comprehensive`. Per the playbook, launch 5 parallel review agents (quality, implementation, testing, simplification, documentation).
@@ -128,7 +143,7 @@ Loop up to `PLANNING_REVIEW_ITERATIONS` times (default: 5). Track the current it
 
 5. **After fixer returns** → show the "FIXES:" section to the user. Report "Review phase 1: iteration N fixes applied". Loop back to step 1.
 
-If `PLANNING_REVIEW_ITERATIONS` is reached with issues still found, report "Review phase 1: max iterations reached, moving on" and continue.
+If `review_iterations` is reached with issues still found, report "Review phase 1: max iterations reached, moving on" and continue.
 
 ### Step 8. Review phase 2 — code smells
 
@@ -155,7 +170,7 @@ Same structure as step 7 but with `REVIEW_PHASE` set to `critical`. Resolve `pro
 
 ### Step 10. Finalize
 
-Detect VCS with [detect-vcs.sh](scripts/detect-vcs.sh). Check `PLANNING_FINALIZE_ENABLED` (default: `1`). If it is not `1`, Git is detached, or VCS is hg, skip this Git-only step and report the reason.
+Detect VCS with [detect-vcs.sh](scripts/detect-vcs.sh). If the resolved `finalize_enabled` value is not `1`, Git is detached, or VCS is hg, skip this Git-only step and report the reason.
 
 After all reviews pass, rebase and clean up commits.
 
@@ -167,7 +182,9 @@ This is best-effort — if rebase fails, report the issue but don't block comple
 
 ### Step 11. Stats summary
 
-After finalize (or after it was skipped), spawn one read-only summary agent with `spawn_agent`, collect it with `wait_agent`, and use `prompts/stats.md`. Replace `DEFAULT_BRANCH`, `PLAN_FILE_PATH`, `PROGRESS_FILE_PATH`, `START_TIME`, and `VCS` in the resolved content.
+After finalize (or after it was skipped), log completion by running [append-progress.sh](scripts/append-progress.sh) with the progress-file path and `completed`. This gives the stats agent the final run state and completion timestamp.
+
+Then spawn one read-only summary agent with `spawn_agent`, collect it with `wait_agent`, and use `prompts/stats.md`. Replace `DEFAULT_BRANCH`, `PLAN_FILE_PATH`, and `PROGRESS_FILE_PATH` in the resolved content.
 
 The stats agent reads only the progress file, plan, elapsed timestamps, and stable Git or Mercurial commands. It reports tasks, commits, diff stat, review/fixer iterations, validation, and elapsed time. It never parses internal Codex transcripts or caches.
 
@@ -179,7 +196,6 @@ This step is best-effort — if stable progress or VCS data cannot be resolved, 
 
 When stats summary is done (or skipped on failure):
 - **Report autonomous decisions and deviations to the user.** The run had no human to answer questions, so subagents decided judgment calls themselves and logged them. Collect every such entry from the progress file — `grep -E '^\[(decision|deviation)\]' <progress-file>` — and present them in a dedicated section titled **"Decisions made autonomously / Deviations from the plan"**, one bullet per entry with its stated reason, so the user learns every question the run answered on its own and why. If there are none, state "no autonomous decisions or deviations were logged." Do this regardless of whether finalize ran — finalize is skipped on hg or when disabled, so this is the guaranteed place the user always gets the report.
-- Log completion by running [append-progress.sh](scripts/append-progress.sh) with the progress-file path and `completed`.
 - Move the finished plan into its `completed/` subdirectory and commit it (best-effort) by running [move-plan.sh](scripts/move-plan.sh) with the absolute plan-file path. The script is a no-op when the plan is already under `completed/` or missing, derives the target as a `completed/` sibling of the plan's directory (so it respects a custom `plans_dir` and worktrees), and commits the move VCS-aware (git/hg). Do NOT push. If the script exits non-zero, report the failure but do not block completion.
 - Report the final line "All N tasks completed, reviews passed". Append ", branch finalized" only when finalize actually ran successfully. Append ", plan moved to completed/" only when move-plan.sh actually moved the file (it printed `moved plan to ...`); omit either suffix when that action was skipped, a no-op, or failed.
 

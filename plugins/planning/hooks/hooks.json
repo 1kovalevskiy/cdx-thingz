@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${PLUGIN_ROOT}/hooks/seed-overrides.sh\" \"${PLUGIN_ROOT}\" \"${CODEX_HOME:-$HOME/.codex}\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

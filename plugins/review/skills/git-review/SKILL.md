@@ -1,6 +1,7 @@
 ---
 name: git-review
 description: Interactive git diff annotation review. Generates a cleaned-up diff, opens in editor for user annotations, and addresses feedback in a loop. Activates on "git review", "review changes", "review my changes", "annotate changes", "interactive review".
+allowed-tools: Bash, Read, Edit, Write, Grep, Glob
 ---
 
 # Git Review

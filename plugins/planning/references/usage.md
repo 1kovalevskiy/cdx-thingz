@@ -1,6 +1,6 @@
 # Planning Plugin Usage
 
-The planning plugin has three components: make (plan creation), exec (autonomous execution), and plan-review (quality review prompt).
+The planning plugin has three workflow components: make (plan creation), exec (autonomous execution), and plan-review (quality review prompt). A `SessionStart` hook seeds editable user overrides.
 
 ## Make — `$planning:make`
 
@@ -12,7 +12,7 @@ The planning plugin has three components: make (plan creation), exec (autonomous
 1. **Step 0** — parses intent (feature, bug fix, refactor, migration) and explores codebase for context
 2. **Step 1** — asks focused questions one at a time: goal, scope, constraints, testing approach, title
 3. **Step 1.5** — proposes 2-3 implementation approaches with trade-offs (skipped if obvious)
-4. **Step 2** — creates plan file at `docs/plans/yyyymmdd-<task-name>.md`
+4. **Step 2** — creates a plan file at `docs/plans/yyyymmdd-<task-name>.md`
 5. **Step 3** — offers next steps: interactive review, auto review, implement, or done
 
 ### Examples
@@ -36,7 +36,7 @@ $planning:make add my Go testing rules to user-level planning rules
 - "exec", "execute plan", "run plan"
 
 ### Workflow
-1. Resolves plan file (from argument or picks from `docs/plans/`)
+1. Resolves the plan file from the argument or the configured plans directory
 2. Uses the Codex Worktree already selected for the task; in Local mode, asks whether to continue in place or restart in Worktree mode
 3. On the local default branch, creates a `codex/<plan-name>` feature branch after confirmation
 4. Executes tasks sequentially — one subagent per task, commits after each
@@ -61,7 +61,7 @@ Prompts and agent definitions use a three-layer override chain:
 2. User: `${CODEX_HOME:-$HOME/.codex}/exec-plan/prompts/` and `${CODEX_HOME:-$HOME/.codex}/exec-plan/agents/`
 3. Bundled defaults
 
-Bundled defaults are used directly when no override exists. Create only the project or user override files you want to customize.
+A `SessionStart` hook copies bundled defaults into `${CODEX_HOME:-$HOME/.codex}/exec-plan/` on first run without overwriting existing files. Edit those user copies to customize all projects, or create project overrides for repository-specific behavior. If the hook has not been trusted or has not run yet, bundled defaults are still used directly.
 
 ### Customization patterns
 

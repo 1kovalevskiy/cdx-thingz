@@ -1,6 +1,7 @@
 ---
 name: learn
 description: Update project AGENTS.md with strategic knowledge discovered during this session, or Codex Local Memories when the discovery is personal or machine-specific. Defers to project guidance instead of overriding it. Use when user says "learn", "save knowledge", "update agents.md", "capture learnings", or at end of significant work sessions. Also used by commit skill for pre-commit knowledge capture.
+allowed-tools: Read, Edit, AskUserQuestion
 ---
 
 # Learn
@@ -83,10 +84,10 @@ Ask yourself for each discovery:
 ## Workflow
 
 ### 1. Check for Existing Memory-Placement Guidance
-Before applying the routing rules below, scan all applicable project `AGENTS.md` files, `${CODEX_HOME:-$HOME/.codex}/AGENTS.md`, and accessible Local Memories for documented memory-placement guidance. Do not use `AGENTS.override.md`, because it replaces nearby guidance instead of supplementing it. If guidance exists, follow it instead of using this skill's defaults.
+Before applying the routing rules below, scan the effective project instruction chain (applicable `AGENTS.md` and `AGENTS.override.md` files), `${CODEX_HOME:-$HOME/.codex}/AGENTS.md`, and accessible Local Memories for documented memory-placement guidance. If guidance exists, follow it instead of using this skill's defaults.
 
 ### 2. Check Existing Memory Content
-Read the applicable project `AGENTS.md`, `${CODEX_HOME:-$HOME/.codex}/AGENTS.md`, and accessible Local Memories to avoid duplication, including cross-project entries already captured in user memory.
+Read the effective project instruction chain, `${CODEX_HOME:-$HOME/.codex}/AGENTS.md`, and accessible Local Memories to avoid duplication, including cross-project entries already captured in user memory.
 
 ### 3. Early Exit if Nothing Found
 If no new strategic knowledge was discovered during this session:

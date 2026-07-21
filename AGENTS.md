@@ -28,7 +28,7 @@ Guidance for Codex when working in this repository.
 
 - `brainstorm` — collaborative design.
 - `review` — PR, local diff, and writing-style review.
-- `planning` — plan creation, explicit editor review, and sequential execution.
+- `planning` — plan creation, explicit editor review, sequential execution, and a `SessionStart` bootstrap for editable prompt/reviewer overrides.
 - `release-tools` — release preparation and last-tag summaries.
 - `thinking-tools` — dialectic and root-cause analysis.
 - `skill-eval` — skill-selection reminder hook.

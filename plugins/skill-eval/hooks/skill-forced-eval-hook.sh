@@ -3,7 +3,14 @@
 #
 # forces Codex to evaluate and use relevant skills before implementation.
 
-cat <<'EOF'
+printf '%s' '{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"'
+awk 'BEGIN { first = 1 } {
+    gsub(/\\/, "\\\\")
+    gsub(/"/, "\\\"")
+    if (!first) printf "\\n"
+    printf "%s", $0
+    first = 0
+}' <<'EOF'
 INSTRUCTION: MANDATORY SKILL ACTIVATION
 
 Check available skills for relevance before proceeding.
@@ -26,3 +33,4 @@ CRITICAL: Read and follow ALL relevant skills before implementation.
 Multiple skills can and should be used when applicable.
 Mentioning a skill without reading and following it is worthless.
 EOF
+printf '%s\n' '"}}'

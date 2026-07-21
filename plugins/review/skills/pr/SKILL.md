@@ -1,6 +1,7 @@
 ---
 name: pr
 description: Comprehensive PR/issue review - analyzes architecture, tests, identifies unrelated changes mixed in, drafts review comment or issue comment. Use when user asks to review a PR, check a PR, look at PR changes, or comment on an issue.
+allowed-tools: Bash, Read, Grep, Glob, Write, Skill, AskUserQuestion, Task
 ---
 
 # PR Review Skill

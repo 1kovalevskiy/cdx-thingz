@@ -1,5 +1,5 @@
 {
-  "name": "thinking-tools", "version": "2.0.0",
+  "name": "thinking-tools", "version": "1.0.0",
   "description": "Dialectic analysis and systematic root-cause investigation.",
   "author": { "name": "1kovalevskiy", "url": "https://github.com/1kovalevskiy" },
   "homepage": "https://github.com/1kovalevskiy/cdx-thingz", "repository": "https://github.com/1kovalevskiy/cdx-thingz", "license": "MIT",

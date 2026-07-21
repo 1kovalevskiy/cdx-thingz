@@ -13,7 +13,7 @@ set -e
 
 path="$1"
 if [ -z "$path" ]; then
-    echo "error: usage: resolve-file.sh <relative-path> [data-dir]" >&2
+    echo "error: usage: resolve-file.sh <relative-path>" >&2
     exit 1
 fi
 

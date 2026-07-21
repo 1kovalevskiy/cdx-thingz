@@ -1,6 +1,7 @@
 ---
 name: md-copy
 description: Format final answer as markdown and copy to clipboard. Use when user says "copy as markdown", "md copy", "copy formatted", "clipboard", or wants the session's final answer formatted and copied.
+allowed-tools: Bash
 ---
 
 # Markdown Copy

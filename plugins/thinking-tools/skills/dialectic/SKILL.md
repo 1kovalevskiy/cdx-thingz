@@ -1,6 +1,7 @@
 ---
 name: dialectic
 description: Prove and counter-prove a statement using parallel agents to eliminate confirmation bias. Use when someone says "dialectic", "prove/disprove", "stress test this claim", "is this really true", "argue both sides", or when a statement needs objective analysis from opposing viewpoints.
+allowed-tools: Bash, Read, Grep, Glob, Task, AskUserQuestion
 ---
 
 # Dialectic Analysis

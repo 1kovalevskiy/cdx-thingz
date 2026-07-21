@@ -1,5 +1,5 @@
 {
-  "name": "release-tools", "version": "3.0.0",
+  "name": "release-tools", "version": "1.0.0",
   "description": "Release creation, semantic versioning, and unreleased-change summaries.",
   "author": { "name": "1kovalevskiy", "url": "https://github.com/1kovalevskiy" },
   "homepage": "https://github.com/1kovalevskiy/cdx-thingz", "repository": "https://github.com/1kovalevskiy/cdx-thingz", "license": "MIT",

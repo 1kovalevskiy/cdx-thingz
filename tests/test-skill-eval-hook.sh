@@ -13,7 +13,15 @@ assert command == 'sh "${PLUGIN_ROOT}/hooks/skill-forced-eval-hook.sh"'
 PY
 
 output="$(sh "$SCRIPT")"
-grep -q "Read every relevant skill's SKILL.md completely" <<<"$output"
-grep -q "Announce that you are using each selected skill" <<<"$output"
-grep -q "Follow all selected skill instructions" <<<"$output"
+python3 - "$output" <<'PY'
+import json, sys
+
+data = json.loads(sys.argv[1])
+hook_output = data["hookSpecificOutput"]
+assert hook_output["hookEventName"] == "UserPromptSubmit"
+context = hook_output["additionalContext"]
+assert "Read every relevant skill's SKILL.md completely" in context
+assert "Announce that you are using each selected skill" in context
+assert "Follow all selected skill instructions" in context
+PY
 echo "skill-eval hook: PASS"

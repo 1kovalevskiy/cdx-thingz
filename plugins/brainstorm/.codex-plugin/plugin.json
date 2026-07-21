@@ -1,5 +1,5 @@
 {
-  "name": "brainstorm", "version": "3.0.0",
+  "name": "brainstorm", "version": "1.0.0",
   "description": "Collaborative design dialogue from idea to implementation-ready design.",
   "author": { "name": "1kovalevskiy", "url": "https://github.com/1kovalevskiy" },
   "homepage": "https://github.com/1kovalevskiy/cdx-thingz", "repository": "https://github.com/1kovalevskiy/cdx-thingz", "license": "MIT",

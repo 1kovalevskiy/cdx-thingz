@@ -1,5 +1,5 @@
 {
-  "name": "review", "version": "3.0.0",
+  "name": "review", "version": "1.0.0",
   "description": "Pull request, local diff, and technical writing review workflows.",
   "author": { "name": "1kovalevskiy", "url": "https://github.com/1kovalevskiy" },
   "homepage": "https://github.com/1kovalevskiy/cdx-thingz", "repository": "https://github.com/1kovalevskiy/cdx-thingz", "license": "MIT",

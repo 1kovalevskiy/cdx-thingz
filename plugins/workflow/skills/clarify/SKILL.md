@@ -1,6 +1,7 @@
 ---
 name: clarify
 description: This skill should be used when user appears confused, frustrated, or shows misalignment between expectations and reality. Triggers on phrases like "I don't understand", "this doesn't make sense", "confused", "wait, shouldn't it...", "why is this happening", "I thought X did Y", contradictory statements, or frustration signals. Analyzes the confusion, explains the actual behavior, and determines if there's a real issue to address.
+allowed-tools: EnterPlanMode, AskUserQuestion
 ---
 
 # Clarify

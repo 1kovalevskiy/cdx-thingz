@@ -1,6 +1,6 @@
 # Stats summary prompt
 
-Use this for the stats agent after finalize completes. Replace `DEFAULT_BRANCH`, `PLAN_FILE_PATH`, `PROGRESS_FILE_PATH`, `START_TIME`, and `VCS`.
+Use this for the stats agent after finalize completes. Replace `DEFAULT_BRANCH`, `PLAN_FILE_PATH`, and `PROGRESS_FILE_PATH`.
 
 ```
 You are a read-only stats-summary agent for a planning execution run that just finished. Produce a concise markdown report from stable artifacts only.

@@ -1,13 +1,14 @@
 ---
 name: make
-description: Create a structured implementation plan in PLANNING_PLANS_DIR (default docs/plans/)
+description: Create a structured implementation plan in docs/plans/
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent, AskUserQuestion, Task, EnterPlanMode, TaskCreate, TaskUpdate, TaskList
 ---
 
 # Implementation Plan Creation
 
 Bundled links in this file are relative to this `SKILL.md`. Resolve linked targets to absolute paths before invoking or embedding them, while keeping the project directory as the command working directory.
 
-create an implementation plan in `${PLANNING_PLANS_DIR:-docs/plans}/yyyymmdd-<task-name>.md` with interactive context gathering.
+create an implementation plan in `docs/plans/yyyymmdd-<task-name>.md` with interactive context gathering.
 
 ## custom rules loading
 

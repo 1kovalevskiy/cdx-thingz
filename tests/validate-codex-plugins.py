@@ -9,13 +9,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 MARKETPLACE = ROOT / ".agents/plugins/marketplace.json"
 EXPECTED = {
-    "brainstorm": "3.0.0",
-    "review": "3.0.0",
-    "planning": "4.0.0",
-    "release-tools": "3.0.0",
-    "thinking-tools": "2.0.0",
-    "skill-eval": "2.0.0",
-    "workflow": "2.0.0",
+    "brainstorm": "1.0.0",
+    "review": "1.0.0",
+    "planning": "1.0.0",
+    "release-tools": "1.0.0",
+    "thinking-tools": "1.0.0",
+    "skill-eval": "1.0.0",
+    "workflow": "1.0.0",
 }
 SEMVER = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
 errors: list[str] = []

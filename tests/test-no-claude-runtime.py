@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reject legacy runtime contracts outside explicitly historical material."""
+"""Reject legacy runtime contracts outside standard skill metadata."""
 
 from pathlib import Path
 
@@ -30,6 +30,10 @@ for path in files:
         text = path.read_text()
     except UnicodeDecodeError:
         continue
+    if path.name == "SKILL.md":
+        text = "\n".join(
+            line for line in text.splitlines() if not line.startswith("allowed-tools:")
+        )
     for token in parts:
         if token in text:
             line = text[: text.index(token)].count("\n") + 1

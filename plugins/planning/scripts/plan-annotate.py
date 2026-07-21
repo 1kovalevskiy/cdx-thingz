@@ -269,6 +269,24 @@ def run_tests() -> None:
             finally:
                 tmp.unlink(missing_ok=True)
 
+        def test_no_changes_produces_no_output(self) -> None:
+            import io
+
+            plan = Path(tempfile.mktemp(suffix=".md"))
+            plan.write_text("# Plan\n- task 1\n")
+            original_open_editor = globals()["open_editor"]
+            original_stdout = sys.stdout
+            output = io.StringIO()
+            globals()["open_editor"] = lambda _path: 0
+            sys.stdout = output
+            try:
+                run_file_mode(plan)
+            finally:
+                globals()["open_editor"] = original_open_editor
+                sys.stdout = original_stdout
+                plan.unlink(missing_ok=True)
+            self.assertEqual(output.getvalue(), "")
+
     class TestDisableReview(unittest.TestCase):
         def setUp(self) -> None:
             os.environ["PLANNING_DISABLE_REVDIFF"] = "1"

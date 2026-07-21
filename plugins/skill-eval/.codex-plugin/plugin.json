@@ -1,5 +1,5 @@
 {
-  "name": "skill-eval", "version": "2.0.0",
+  "name": "skill-eval", "version": "1.0.0",
   "description": "Reminds Codex to evaluate available skills before responding.",
   "author": { "name": "1kovalevskiy", "url": "https://github.com/1kovalevskiy" },
   "homepage": "https://github.com/1kovalevskiy/cdx-thingz", "repository": "https://github.com/1kovalevskiy/cdx-thingz", "license": "MIT",
